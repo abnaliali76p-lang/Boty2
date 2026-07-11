@@ -11,7 +11,8 @@ TOKEN = "8760224750:AAHyBrs4ObK5RRBK0OZvnQN5Lt7VOjdbRbk"
 ADMIN_ID = 8649158458 
 BOT_USERNAME = "Groud_Vip_bot" 
 MONGO_URI = os.environ.get("MONGO_URI") 
-PORT = int(os.environ.get("PORT", 5000))
+# تم تغيير المنفذ إلى 5001 لتجنب التعارض
+PORT = int(os.environ.get("PORT", 5001))
 
 reply_targets = {}
 app = Flask(__name__)
@@ -25,17 +26,16 @@ bot = telebot.TeleBot(TOKEN)
 bot.delete_webhook()
 
 client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
-db = client["bot_database"]
+# تم تغيير اسم قاعدة البيانات إلى bot_database_new لضمان الفصل التام
+db = client["bot_database_new"]
 users_col = db["users"]
 
 VIDEO_URL = "https://files.catbox.moe/sq1gyw.mp4"
 
-# النص الذي سيتم نشره عند المشاركة (يشير للبوت مباشرة)
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
 DIRECT_CONTACT_URL = "https://t.me/+vj7YkGPLIc1mY2Jk"
 
-# نص الترحيب المحدث
 def get_welcome_text(first_name):
     return (
         f"<blockquote><b>🌟 {first_name} ברוכים הבאים למקום הכי חם בישראל! 🌟\n\n"
