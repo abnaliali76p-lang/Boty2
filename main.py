@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 # --- الإعدادات ---
 TOKEN = "8760224750:AAHyBrs4ObK5RRBK0OZvnQN5Lt7VOjdbRbk"
-ADMIN_ID = 8649158458 
+ADMIN_ID = 8873553496 
 BOT_USERNAME = "Groud_Vip_bot" 
 MONGO_URI = os.environ.get("MONGO_URI") 
 # تم تغيير المنفذ إلى 5001 لتجنب التعارض
@@ -30,7 +30,7 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-VIDEO_URL = "https://files.catbox.moe/sq1gyw.mp4"
+VIDEO_URL = "https://files.catbox.moe/vl7pfp.mp4"
 
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
