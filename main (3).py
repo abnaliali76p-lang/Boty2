@@ -1,0 +1,136 @@
+import os
+import telebot
+from pymongo import MongoClient
+import urllib.parse
+from flask import Flask
+from threading import Thread
+from datetime import datetime, timedelta
+
+# --- الإعدادات ---
+TOKEN = "8760224750:AAHyBrs4ObK5RRBK0OZvnQN5Lt7VOjdbRbk"
+ADMIN_ID = 8649158458 
+BOT_USERNAME = "Groud_Vip_bot" 
+MONGO_URI = os.environ.get("MONGO_URI") 
+PORT = int(os.environ.get("PORT", 5000))
+
+reply_targets = {}
+app = Flask(__name__)
+
+@app.route('/')
+def home(): return "Bot is running!"
+
+def run_web(): app.run(host="0.0.0.0", port=PORT)
+
+bot = telebot.TeleBot(TOKEN)
+bot.delete_webhook()
+
+client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
+db = client["bot_database"]
+users_col = db["users"]
+
+VIDEO_URL = "https://files.catbox.moe/sq1gyw.mp4"
+
+# النص الذي سيتم نشره عند المشاركة (يشير للبوت مباشرة)
+TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
+SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
+DIRECT_CONTACT_URL = "https://t.me/+vj7YkGPLIc1mY2Jk"
+
+# نص الترحيب المحدث
+def get_welcome_text(first_name):
+    return (
+        f"<blockquote><b>🌟 {first_name} ברוכים הבאים למקום הכי חם בישראל! 🌟\n\n"
+        f"אתם מרחק נגיעה מהתכנים הכי בלעדיים שכולם מדברים עליהם. 🔞\n\n"
+        f"כל התוכן הכי בלעדי נמצא כאן בבוט שלנו! 🔞\n"
+        f"שתפו את הבוט ל-3 קבוצות או ל-5 חברים כדי לפתוח את כל התכנים באופן מיידי.\n\n"
+        f"ברגע שתסיימו – המערכת תאשר אתכם אוטומטית ותוכלו ליהנות מכל הסרטונים! ⏳✅\n\n"
+        f"אל תחכו, כולם כבר שם! 👇</b></blockquote>"
+    )
+
+def send_welcome_message(user_id, first_name):
+    if user_id != ADMIN_ID:
+        now = datetime.now()
+        user = users_col.find_one({"user_id": user_id})
+        if user and user.get("last_welcome"):
+            if now - user.get("last_welcome") < timedelta(hours=24):
+                return
+        users_col.update_one({"user_id": user_id}, {"$set": {"last_welcome": now, "name": first_name}}, upsert=True)
+        
+        try:
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.add(telebot.types.InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}"))
+            bot.send_message(ADMIN_ID, f"👤 **مشترك جديد:** {first_name}\nID: `{user_id}`", reply_markup=markup)
+        except: pass
+
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
+    markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", callback_data="check_share"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url=DIRECT_CONTACT_URL))
+    
+    try:
+        bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
+                       parse_mode="HTML", protect_content=True, reply_markup=markup)
+    except Exception as e: print(f"Error: {e}")
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callbacks(call):
+    if call.data.startswith("reply_"):
+        user_id = call.data.split("_")[1]
+        reply_targets[call.message.chat.id] = user_id
+        bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
+        bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{user_id}`:")
+    elif call.data == "check_share":
+        bot.answer_callback_query(call.id, "⚠️ נא לבצע שיתוף תחילה!", show_alert=True)
+    elif call.data == "confirm_reset":
+        users_col.update_many({}, {"$unset": {"last_welcome": ""}})
+        bot.edit_message_text("✅ تم تصفير جميع تواريخ الترحيب بنجاح.", call.message.chat.id, call.message.message_id)
+    elif call.data == "cancel_reset":
+        bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    send_welcome_message(message.chat.id, message.from_user.first_name)
+
+@bot.message_handler(commands=['reset_all'])
+def reset_all(message):
+    if message.chat.id == ADMIN_ID:
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("✅ نعم، تصفير التواريخ", callback_data="confirm_reset"))
+        markup.add(telebot.types.InlineKeyboardButton("❌ إلغاء", callback_data="cancel_reset"))
+        bot.reply_to(message, "⚠️ **تنبيه:** هل أنت متأكد من تصفير تواريخ الترحيب لجميع المستخدمين؟", reply_markup=markup)
+
+@bot.message_handler(commands=['stats'])
+def stats(message):
+    if message.chat.id == ADMIN_ID:
+        bot.reply_to(message, f"👥 عدد المشتركين: `{users_col.count_documents({})}`")
+
+@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.chat.id in reply_targets)
+def send_admin_reply(message):
+    target = reply_targets.pop(message.chat.id)
+    try:
+        bot.send_message(target, f"📩 رسالة من الإدارة:\n{message.text}")
+        bot.send_message(ADMIN_ID, "✅ تم الإرسال.")
+    except: bot.send_message(ADMIN_ID, "❌ فشل الإرسال.")
+
+@bot.chat_join_request_handler()
+def join_req(request):
+    send_welcome_message(request.from_user.id, request.from_user.first_name)
+
+@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
+def broadcast(message):
+    users = users_col.find()
+    count = 0
+    for u in users:
+        try: 
+            bot.copy_message(u['user_id'], message.chat.id, message.message_id)
+            count += 1
+        except: continue
+    bot.send_message(ADMIN_ID, f"✅ تم الإرسال لـ {count} مشترك.")
+
+@bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
+def forward(message):
+    try: bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
+    except: pass
+
+if __name__ == "__main__":
+    Thread(target=run_web).start()
+    bot.infinity_polling()
