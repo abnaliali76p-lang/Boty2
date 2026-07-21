@@ -34,7 +34,7 @@ VIDEO_URL = "https://files.catbox.moe/vl7pfp.mp4"
 
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
-DIRECT_CONTACT_URL = "https://t.me/+vj7YkGPLIc1mY2Jk"
+DIRECT_CONTACT_URL = "https://t.me/+TGNcvrXJN7xhYTJl"
 
 def get_welcome_text(first_name):
     return (
