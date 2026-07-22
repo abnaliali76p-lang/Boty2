@@ -103,13 +103,27 @@ def stats(message):
     if message.chat.id == ADMIN_ID:
         bot.reply_to(message, f"👥 عدد المشتركين: `{users_col.count_documents({})}`")
 
-@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.chat.id in reply_targets)
-def send_admin_reply(message):
-    target = reply_targets.pop(message.chat.id)
-    try:
-        bot.send_message(target, f"📩 رسالة من الإدارة:\n{message.text}")
-        bot.send_message(ADMIN_ID, "✅ تم الإرسال.")
-    except: bot.send_message(ADMIN_ID, "❌ فشل الإرسال.")
+@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
+def broadcast(message):
+    users = users_col.find()
+    count = 0
+    fail_count = 0
+    
+    for u in users:
+        try:
+            # استخدام إرسال النص مع دعم الرموز والإيموجي وتنسيق HTML لضمان عدم حدوث أخطاء
+            if message.text:
+                bot.send_message(u["user_id"], message.text, parse_mode="HTML")
+            else:
+                # إذا كانت الرسالة عبارة عن صورة أو فيديو يتم نسخها بشكل آمن
+                bot.copy_message(u["user_id"], message.chat.id, message.message_id)
+            count += 1
+        except Exception as e:
+            fail_count += 1
+            print(f"Broadcast error for user {u.get('user_id')}: {e}")
+            continue
+            
+    bot.send_message(ADMIN_ID, f"✅ تم الإرسال بنجاح لـ {count} مشترك.\n❌ فشل الإرسال لـ {fail_count} مشترك.")
 
 @bot.chat_join_request_handler()
 def join_req(request):
