@@ -111,12 +111,8 @@ def broadcast(message):
     
     for u in users:
         try:
-            # استخدام إرسال النص مع دعم الرموز والإيموجي وتنسيق HTML لضمان عدم حدوث أخطاء
-            if message.text:
-                bot.send_message(u["user_id"], message.text, parse_mode="HTML")
-            else:
-                # إذا كانت الرسالة عبارة عن صورة أو فيديو يتم نسخها بشكل آمن
-                bot.copy_message(u["user_id"], message.chat.id, message.message_id)
+            # استخدام copy_message يحافظ حرفياً على الإيموجي المميز والتنسيقات والخطوط تماماً كما كتبتها
+            bot.copy_message(u["user_id"], message.chat.id, message.message_id)
             count += 1
         except Exception as e:
             fail_count += 1
@@ -124,6 +120,7 @@ def broadcast(message):
             continue
             
     bot.send_message(ADMIN_ID, f"✅ تم الإرسال بنجاح لـ {count} مشترك.\n❌ فشل الإرسال لـ {fail_count} مشترك.")
+
 
 @bot.chat_join_request_handler()
 def join_req(request):
