@@ -22,7 +22,7 @@ def home(): return "Bot is running!"
 def run_web(): app.run(host="0.0.0.0", port=PORT)
 
 bot = telebot.TeleBot(TOKEN)
-bot.delete_webhook()
+bot.remove_webhook() # إزالة أي ويب هوك قديم لضمان العمل الفوري
 
 client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
@@ -69,21 +69,7 @@ def send_welcome_message(user_id, first_name):
                        parse_mode="HTML", protect_content=True, reply_markup=markup)
     except Exception as e: print(f"Error: {e}")
 
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callbacks(call):
-    if call.data.startswith("reply_"):
-        user_id = call.data.split("_")[1]
-        reply_targets[call.message.chat.id] = user_id
-        bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
-        bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{user_id}`:")
-    elif call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ נא לבצע שיתוף תחילה!", show_alert=True)
-    elif call.data == "confirm_reset":
-        users_col.update_many({}, {"$unset": {"last_welcome": ""}})
-        bot.edit_message_text("✅ تم تصفير جميع تواريخ الترحيب بنجاح.", call.message.chat.id, call.message.message_id)
-    elif call.data == "cancel_reset":
-        bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
-
+# --- 1. الأوامر الأساسية أولاً لضمان سرعة الاستجابة ---
 @bot.message_handler(commands=['start'])
 def start(message):
     send_welcome_message(message.chat.id, message.from_user.first_name)
@@ -99,8 +85,10 @@ def reset_all(message):
 @bot.message_handler(commands=['stats'])
 def stats(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, f"👥 عدد المشتركين: `{users_col.count_documents({})}`")
+        count = users_col.count_documents({})
+        bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="HTML")
 
+# --- 2. معالجة الردود والإذاعة ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
 def broadcast(message):
     users = users_col.find()
@@ -120,7 +108,6 @@ def broadcast(message):
                 deleted_count += 1
             else:
                 fail_count += 1
-                print(f"Broadcast error for user {target_id}: {e}")
             continue
             
     bot.send_message(
@@ -130,6 +117,21 @@ def broadcast(message):
         f"🗑️ تم حذف المستخدمين المحظورين/الوهميين: `{deleted_count}`\n"
         f"❌ أخطاء أخرى: `{fail_count}`"
     )
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callbacks(call):
+    if call.data.startswith("reply_"):
+        user_id = call.data.split("_")[1]
+        reply_targets[call.message.chat.id] = user_id
+        bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
+        bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{user_id}`:")
+    elif call.data == "check_share":
+        bot.answer_callback_query(call.id, "⚠️ נא לבצע שיתוף תחילה!", show_alert=True)
+    elif call.data == "confirm_reset":
+        users_col.update_many({}, {"$unset": {"last_welcome": ""}})
+        bot.edit_message_text("✅ تم تصفير جميع تواريخ الترحيب بنجاح.", call.message.chat.id, call.message.message_id)
+    elif call.data == "cancel_reset":
+        bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
 
 @bot.chat_join_request_handler()
 def join_req(request):
