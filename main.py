@@ -11,7 +11,6 @@ TOKEN = "8760224750:AAHyBrs4ObK5RRBK0OZvnQN5Lt7VOjdbRbk"
 ADMIN_ID = 8873553496 
 BOT_USERNAME = "Groud_Vip_bot" 
 MONGO_URI = os.environ.get("MONGO_URI") 
-# تم تغيير المنفذ إلى 5001 لتجنب التعارض
 PORT = int(os.environ.get("PORT", 5001))
 
 reply_targets = {}
@@ -26,7 +25,6 @@ bot = telebot.TeleBot(TOKEN)
 bot.delete_webhook()
 
 client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
-# تم تغيير اسم قاعدة البيانات إلى bot_database_new لضمان الفصل التام
 db = client["bot_database_new"]
 users_col = db["users"]
 
@@ -113,12 +111,10 @@ def broadcast(message):
     for u in users:
         target_id = u.get("user_id")
         try:
-            # استخدام copy_message للحفاظ على التنسيقات والإيموجي
             bot.copy_message(target_id, message.chat.id, message.message_id)
             count += 1
         except Exception as e:
             error_message = str(e).lower()
-            # التحقق مما إذا كان المستخدم قد حظر البوت أو حذف حسابه لحذفه تلقائياً
             if "blocked" in error_message or "deactivated" in error_message or "chat not found" in error_message:
                 users_col.delete_one({"user_id": target_id})
                 deleted_count += 1
@@ -135,21 +131,9 @@ def broadcast(message):
         f"❌ أخطاء أخرى: `{fail_count}`"
     )
 
-
 @bot.chat_join_request_handler()
 def join_req(request):
     send_welcome_message(request.from_user.id, request.from_user.first_name)
-
-@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
-def broadcast(message):
-    users = users_col.find()
-    count = 0
-    for u in users:
-        try: 
-            bot.copy_message(u['user_id'], message.chat.id, message.message_id)
-            count += 1
-        except: continue
-    bot.send_message(ADMIN_ID, f"✅ تم الإرسال لـ {count} مشترك.")
 
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
 def forward(message):
