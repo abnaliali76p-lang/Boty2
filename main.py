@@ -64,8 +64,8 @@ def send_welcome_message(user_id, first_name):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
     markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", callback_data="check_share"))
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url=DIRECT_CONTACT_URL))
-    
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/Msopsn_kslsndb?text=%D7%A9%D7%9C%D7%95%D7%9D%2C%20%D7%AA%D7%A0%20%D7%9C%D7%99%20%D7%A4%D7%A8%D7%98%D7%99%D7%9D%20%D7%A2%D7%9C%20%D7%A7%D7%91%D7%95%D7%A6%D7%AA%20%D7%94-VIP"))
+
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
                        parse_mode="HTML", protect_content=True, reply_markup=markup)
