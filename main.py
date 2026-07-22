@@ -1,4 +1,5 @@
 import os
+import time  # <--- أضفنا مكتبة الوقت للتأخير الزمني
 import telebot
 from pymongo import MongoClient
 import urllib.parse
@@ -69,7 +70,7 @@ def send_welcome_message(user_id, first_name):
                        parse_mode="HTML", protect_content=True, reply_markup=markup)
     except Exception as e: print(f"Error: {e}")
 
-# --- 1. الأوامر الأساسية أولاً لضمان سرعة الاستجابة ---
+# --- الأوامر الأساسية ---
 @bot.message_handler(commands=['start'])
 def start(message):
     send_welcome_message(message.chat.id, message.from_user.first_name)
@@ -88,7 +89,7 @@ def stats(message):
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="HTML")
 
-# --- 2. معالجة الردود والإذاعة ---
+# --- الإذاعة الذكية مع التنظيم الفاصل ومعرفة سبب الخطأ ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
 def broadcast(message):
     users = users_col.find()
@@ -101,20 +102,25 @@ def broadcast(message):
         try:
             bot.copy_message(target_id, message.chat.id, message.message_id)
             count += 1
+            time.sleep(0.05) # تأخير بسيط جداً (0.05 ثانية) بين كل رسالة وأخرى لتجنب حظر تيليجرام
         except Exception as e:
             error_message = str(e).lower()
+            
+            # إذا كان المستخدم حظر البوت أو حذف حسابه يتم حذفه تلقائياً
             if "blocked" in error_message or "deactivated" in error_message or "chat not found" in error_message:
                 users_col.delete_one({"user_id": target_id})
                 deleted_count += 1
             else:
                 fail_count += 1
+                # طباعة سبب الخطأ الحقيقي في لوحة التحكم لديك لمعرفته
+                print(f"⚠️ خطأ مع المستخدم {target_id}: {str(e)}")
             continue
             
     bot.send_message(
         ADMIN_ID, 
-        f"📊 **تقرير الإذاعة والتنظيف:**\n\n"
+        f"📊 **تقرير الإذاعة والتحسين:**\n\n"
         f"✅ تم الإرسال بنجاح: `{count}`\n"
-        f"🗑️ تم حذف المستخدمين المحظورين/الوهميين: `{deleted_count}`\n"
+        f"🗑️ تم حذف المحظورين/الوهميين: `{deleted_count}`\n"
         f"❌ أخطاء أخرى: `{fail_count}`"
     )
 
