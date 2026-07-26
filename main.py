@@ -33,7 +33,7 @@ VIDEO_URL = "https://files.catbox.moe/vl7pfp.mp4"
 
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
-DIRECT_CONTACT_URL = "https://t.me/+TGNcvrXJN7xhYTJl"
+DIRECT_CONTACT_URL = "https://t.me/+GYXSOPdipk5iOWNk"
 
 def get_welcome_text(first_name):
     return (
@@ -63,7 +63,7 @@ def send_welcome_message(user_id, first_name):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
     markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", callback_data="check_share"))
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/Msopsn_kslsndb?text=%D7%A9%D7%9C%D7%95%D7%9D%2C%20%D7%AA%D7%A0%20%D7%9C%D7%99%20%D7%A4%D7%A8%D7%98%D7%99%D7%9D%20%D7%A2%D7%9C%20%D7%A7%D7%91%D7%95%D7%A6%D7%AA%20%D7%94-VIP"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+EqB5W8oU2gNmYjll"))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
