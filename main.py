@@ -8,7 +8,7 @@ from threading import Thread
 from datetime import datetime, timedelta
 
 # --- الإعدادات ---
-TOKEN = "8760224750:AAHyBrs4ObK5RRBK0OZvnQN5Lt7VOjdbRbk"
+TOKEN = os.environ.get("BOT_TOKEN")  # سحب التوكن بأمان من متغيرات البيئة في Render
 ADMIN_ID = 8873553496 
 BOT_USERNAME = "Groud_Vip_bot" 
 MONGO_URI = os.environ.get("MONGO_URI") 
