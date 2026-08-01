@@ -31,7 +31,7 @@ users_col = db["users"]
 
 VIDEO_URL = "https://files.catbox.moe/vl7pfp.mp4"
 
-TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/GYXSOPdipk5iOWNk"
+TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
 DIRECT_CONTACT_URL = "https://t.me/+GYXSOPdipk5iOWNk"
 
