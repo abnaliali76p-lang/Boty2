@@ -66,7 +66,7 @@ def send_welcome_message(user_id, first_name):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
     markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", url=NEW_LINK_URL))  # تم التعديل ليصبح رابطاً مباشراً
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/Sjdndndbbot"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+5IdWWCRMmCdmY2E0"))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
