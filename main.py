@@ -1,5 +1,5 @@
 import os
-import time  # <--- أضفنا مكتبة الوقت للتأخير الزمني
+import time
 import telebot
 from pymongo import MongoClient
 import urllib.parse
@@ -17,10 +17,12 @@ PORT = int(os.environ.get("PORT", 5001))
 reply_targets = {}
 app = Flask(__name__)
 
-@app.route('/')
-def home(): return "Bot is running!"
+@app.route("/")
+def home(): 
+    return "Bot is running!"
 
-def run_web(): app.run(host="0.0.0.0", port=PORT)
+def run_web(): 
+    app.run(host="0.0.0.0", port=PORT)
 
 bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook() # إزالة أي ويب هوك قديم لضمان العمل الفوري
@@ -34,15 +36,15 @@ VIDEO_URL = "https://files.catbox.moe/2vj6la.MP4"
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
 DIRECT_CONTACT_URL = "https://t.me/+GYXSOPdipk5iOWNk"
+NEW_LINK_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"  # الرابط الجديد للزر الثاني
 
 def get_welcome_text(first_name):
     return (
-        f"<blockquote><b>🌟 {first_name} ברוכים הבאים למקום הכי חם בישראל! 🌟\n\n"
-        f"אתם מרחק נגיעה מהתכנים הכי בלעדיים שכולם מדברים עליהם. 🔞\n\n"
-        f"כל התוכן הכי בלעדי נמצא כאן בבוט שלנו! 🔞\n"
-        f"שתפו את הבוט ל-3 קבוצות או ל-5 חברים כדי לפתוח את כל התכנים באופן מיידי.\n\n"
-        f"ברגע שתסיימו – המערכת תאשר אתכם אוטומטית ותוכלו ליהנות מכל הסרטונים! ⏳✅\n\n"
-        f"אל תחכו, כולם כבר שם! 👇</b></blockquote>"
+        f"<blockquote><b>🌟 {first_name} ברוכים הבאים! 🌟\n\n"
+        f"🔞 התוכן הכי חם מחכה לכם!\n\n"
+        f"1. שתפו ל-3 קבוצות או 5 חברים 📲\n"
+        f"2. קבלו אישור אוטומטי מיידי ⏳✅\n\n"
+        f"להפצצה לחצו למטה 👇</b></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -58,24 +60,26 @@ def send_welcome_message(user_id, first_name):
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}"))
             bot.send_message(ADMIN_ID, f"👤 **مشترك جديد:** {first_name}\nID: `{user_id}`", reply_markup=markup)
-        except: pass
+        except: 
+            pass
 
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
-    markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", callback_data="check_share"))
+    markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", url=NEW_LINK_URL))  # تم التعديل ليصبح رابطاً مباشراً
     markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+EqB5W8oU2gNmYjll"))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
                        parse_mode="HTML", protect_content=True, reply_markup=markup)
-    except Exception as e: print(f"Error: {e}")
+    except Exception as e: 
+        print(f"Error: {e}")
 
 # --- الأوامر الأساسية ---
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=["start"])
 def start(message):
     send_welcome_message(message.chat.id, message.from_user.first_name)
 
-@bot.message_handler(commands=['reset_all'])
+@bot.message_handler(commands=["reset_all"])
 def reset_all(message):
     if message.chat.id == ADMIN_ID:
         markup = telebot.types.InlineKeyboardMarkup()
@@ -83,14 +87,13 @@ def reset_all(message):
         markup.add(telebot.types.InlineKeyboardButton("❌ إلغاء", callback_data="cancel_reset"))
         bot.reply_to(message, "⚠️ **تنبيه:** هل أنت متأكد من تصفير تواريخ الترحيب لجميع المستخدمين؟", reply_markup=markup)
 
-@bot.message_handler(commands=['stats'])
+@bot.message_handler(commands=["stats"])
 def stats(message):
     if message.chat.id == ADMIN_ID:
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="HTML")
 
 # --- الإذاعة الشاملة (صور، نص، فيديو، ألبومات) ---
-# للاستخدام: أرسل الصورة أو النص ثم قم بالرد عليها بالمر ( /bc ) أو كلمة (إذاعة)
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]))
 def broadcast(message):
     users = users_col.find()
@@ -98,7 +101,6 @@ def broadcast(message):
     deleted_count = 0
     fail_count = 0
     
-    # المعرف الخاص بالرسالة أو الصورة التي قمت بالرد عليها
     target_message_id = message.reply_to_message.message_id
     
     bot.send_message(ADMIN_ID, "⏳ جاري بدء الإذاعة...")
@@ -106,20 +108,16 @@ def broadcast(message):
     for u in users:
         target_id = u.get("user_id")
         try:
-            # نسج الصورة أو الرسالة الأصليّة وإرسالها إلى المشترك
             bot.copy_message(chat_id=target_id, from_chat_id=ADMIN_ID, message_id=target_message_id)
             count += 1
-            time.sleep(0.05) # تأخير لتفادي حظر التليجرام
+            time.sleep(0.05) 
         except Exception as e:
             error_message = str(e).lower()
-            
-            # حظر أو حذف الحساب
             if "blocked" in error_message or "deactivated" in error_message or "chat not found" in error_message:
                 users_col.delete_one({"user_id": target_id})
                 deleted_count += 1
             else:
                 fail_count += 1
-                print(f"⚠️ خطأ مع المستخدم {target_id}: {str(e)}")
             continue
             
     bot.send_message(
@@ -137,8 +135,6 @@ def handle_callbacks(call):
         reply_targets[call.message.chat.id] = user_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
         bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{user_id}`:")
-    elif call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ נא לבצע שיתוף תחילה!", show_alert=True)
     elif call.data == "confirm_reset":
         users_col.update_many({}, {"$unset": {"last_welcome": ""}})
         bot.edit_message_text("✅ تم تصفير جميع تواريخ الترحيب بنجاح.", call.message.chat.id, call.message.message_id)
@@ -151,8 +147,10 @@ def join_req(request):
 
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
 def forward(message):
-    try: bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
-    except: pass
+    try: 
+        bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
+    except: 
+        pass
 
 if __name__ == "__main__":
     Thread(target=run_web).start()
