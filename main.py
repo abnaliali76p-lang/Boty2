@@ -33,7 +33,7 @@ users_col = db["users"]
 
 VIDEO_URL = "https://files.catbox.moe/2vj6la.MP4"
 
-TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
+TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/Groud_Vip_bot"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
 DIRECT_CONTACT_URL = "https://t.me/+GYXSOPdipk5iOWNk"
 NEW_LINK_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"  # الرابط الجديد للزر الثاني
@@ -66,7 +66,7 @@ def send_welcome_message(user_id, first_name):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
     markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", url=NEW_LINK_URL))  # تم التعديل ليصبح رابطاً مباشراً
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+EqB5W8oU2gNmYjll"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/Sjdndndbbot"))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
