@@ -29,7 +29,7 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-VIDEO_URL = "https://files.catbox.moe/vl7pfp.mp4"
+VIDEO_URL = "https://files.catbox.moe/2vj6la.MP4"
 
 TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/joinchat/TGNcvrXJN7xhYTJl"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
