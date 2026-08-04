@@ -89,30 +89,36 @@ def stats(message):
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="HTML")
 
-# --- الإذاعة الذكية مع التنظيم الفاصل ومعرفة سبب الخطأ ---
-@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message)
+# --- الإذاعة الشاملة (صور، نص، فيديو، ألبومات) ---
+# للاستخدام: أرسل الصورة أو النص ثم قم بالرد عليها بالمر ( /bc ) أو كلمة (إذاعة)
+@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]))
 def broadcast(message):
     users = users_col.find()
     count = 0
     deleted_count = 0
     fail_count = 0
     
+    # المعرف الخاص بالرسالة أو الصورة التي قمت بالرد عليها
+    target_message_id = message.reply_to_message.message_id
+    
+    bot.send_message(ADMIN_ID, "⏳ جاري بدء الإذاعة...")
+
     for u in users:
         target_id = u.get("user_id")
         try:
-            bot.copy_message(target_id, message.chat.id, message.message_id)
+            # نسج الصورة أو الرسالة الأصليّة وإرسالها إلى المشترك
+            bot.copy_message(chat_id=target_id, from_chat_id=ADMIN_ID, message_id=target_message_id)
             count += 1
-            time.sleep(0.05) # تأخير بسيط جداً (0.05 ثانية) بين كل رسالة وأخرى لتجنب حظر تيليجرام
+            time.sleep(0.05) # تأخير لتفادي حظر التليجرام
         except Exception as e:
             error_message = str(e).lower()
             
-            # إذا كان المستخدم حظر البوت أو حذف حسابه يتم حذفه تلقائياً
+            # حظر أو حذف الحساب
             if "blocked" in error_message or "deactivated" in error_message or "chat not found" in error_message:
                 users_col.delete_one({"user_id": target_id})
                 deleted_count += 1
             else:
                 fail_count += 1
-                # طباعة سبب الخطأ الحقيقي في لوحة التحكم لديك لمعرفته
                 print(f"⚠️ خطأ مع المستخدم {target_id}: {str(e)}")
             continue
             
