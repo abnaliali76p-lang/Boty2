@@ -33,10 +33,8 @@ users_col = db["users"]
 
 VIDEO_URL = "https://files.catbox.moe/vd0m35.MP4"
 
-TEXT_TO_SHARE = "כל התוכן הכי בלעדי נמצא כאן🔞:\nhttps://t.me/Groud_Vip_bot"
-SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(TEXT_TO_SHARE)}"
-DIRECT_CONTACT_URL = "https://t.me/+GYXSOPdipk5iOWNk"
-NEW_LINK_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"  # الرابط الجديد للزر الثاني
+# الرابط الجديد للزر الأول
+NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
 
 def get_welcome_text(first_name):
     return (
@@ -46,7 +44,6 @@ def get_welcome_text(first_name):
         f"קבלו אישור אוטומטי מיידי ⏳✅\n\n"
         f"להפצצה לחצו למטה 👇</b></blockquote>"
     )
-
 
 def send_welcome_message(user_id, first_name):
     if user_id != ADMIN_ID:
@@ -64,9 +61,9 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
+    # الزر الأول يوجه الآن مباشرة إلى الرابط المطلوب
     markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=SHARE_URL))
-    markup.add(telebot.types.InlineKeyboardButton("🔓 כניסה לתוכן", url=NEW_LINK_URL))  # تم التعديل ليصبح رابطاً مباشراً
+    markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=NEW_BUTTON_URL))
     markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+5IdWWCRMmCdmY2E0"))
 
     try:
@@ -155,4 +152,4 @@ def forward(message):
 
 if __name__ == "__main__":
     Thread(target=run_web).start()
-    bot.infinity_polling()
+    bot.infinity_polling(skip_pending=True)
