@@ -33,8 +33,12 @@ users_col = db["users"]
 
 VIDEO_URL = "https://files.catbox.moe/vd0m35.MP4"
 
-# الرابط الجديد للزر الأول
+# الرابط الأول
 NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
+
+# نص وتنسيق رابط القصة مع الرسالة الجاهزة
+STORY_REPLY_TEXT = "שלום, תן לי פרטים על קבוצת ה-VIP"
+STORY_URL = f"https://t.me/share/url?url={urllib.parse.quote('https://t.me/Msopsn_kslsndb/s/9')}&text={urllib.parse.quote(STORY_REPLY_TEXT)}"
 
 def get_welcome_text(first_name):
     return (
@@ -61,10 +65,10 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الزر الأول يوجه الآن مباشرة إلى الرابط المطلوب
+    # الأزرار: الأول يدخل الرابط والمجموعة، والثاني يحول للقصة مع نص جاهز للرد
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=NEW_BUTTON_URL))
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url="https://t.me/+5IdWWCRMmCdmY2E0"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url=STORY_URL))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
@@ -122,7 +126,7 @@ def broadcast(message):
         ADMIN_ID, 
         f"📊 **تقرير الإذاعة والتحسين:**\n\n"
         f"✅ تم الإرسال بنجاح: `{count}`\n"
-        f"🗑️ تم حذف المحظورين/الوهميين: `{deleted_count}`\n"
+        f"🗑️ تم حذف المحظורين/الوهميين: `{deleted_count}`\n"
         f"❌ أخطاء أخرى: `{fail_count}`"
     )
 
