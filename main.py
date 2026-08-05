@@ -40,11 +40,10 @@ NEW_LINK_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"  # الرابط الجديد ل�
 
 def get_welcome_text(first_name):
     return (
-        f"<blockquote><b>🌟 {first_name} ברוכים הבאים! 🌟\n\n"
-        f"🔞 התוכן הכי חם מחכה לכם!\n\n"
-        f"1. שתפו ל-3 קבוצות או 5 חברים 📲\n"
-        f"2. קבלו אישור אוטומטי מיידי ⏳✅\n\n"
-        f"להפצצה לחצו למטה 👇</b></blockquote>"
+        "<blockquote><b>🔞 התוכן הכי חם מחכה לכם!\n\n"
+        "שתפו ל-3 קבוצות או 5 חברים 📲\n\n"
+        "קבלו אישור אוטומטי מיידי ⏳✅\n\n"
+        "להפצצה לחצו למטה 👇</b></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
