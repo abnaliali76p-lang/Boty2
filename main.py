@@ -36,9 +36,7 @@ VIDEO_URL = "https://files.catbox.moe/vd0m35.MP4"
 # الرابط الأول
 NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
 
-# رابط المحادثة المباشرة مع النص المكتوب جاهزاً للإرسال
-VIP_REPLY_TEXT = "שלום, תן לי פרטים על קבוצת ה-VIP"
-# رابط القناة المباشر
+# رابط القناة المباشر للزر الثاني
 CHANNEL_URL = "https://t.me/+EqB5W8oU2gNmYjll"
 
 
@@ -67,10 +65,10 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار: الأول للرابط الخارجي، والثاني للتحويل المباشر لخاص حسابك مع الرسالة الجاهزة
+    # الأزرار: الأول للرابط الأول، والثاني يتضمن رابط القناة المباشر
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton("📢 שיתוף קישור הבוט", url=NEW_BUTTON_URL))
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url=DIRECT_CHAT_URL))
+    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", url=CHANNEL_URL))
 
     try:
         bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
