@@ -38,7 +38,9 @@ NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
 
 # رابط المحادثة المباشرة مع النص المكتوب جاهزاً للإرسال
 VIP_REPLY_TEXT = "שלום, תן לי פרטים על קבוצת ה-VIP"
-DIRECT_CHAT_URL = f"https://t.me/Msopsn_kslsndb?text={urllib.parse.quote(VIP_REPLY_TEXT)}"
+# رابط القناة المباشر
+CHANNEL_URL = "https://t.me/+EqB5W8oU2gNmYjll"
+
 
 def get_welcome_text(first_name):
     return (
