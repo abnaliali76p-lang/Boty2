@@ -31,7 +31,7 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-VIDEO_URL = "https://files.catbox.moe/j6veuh.mp4"
+VIDEO_URL = "https://files.catbox.moe/wio4kl.mp4"
 
 # الرابط الأول
 NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
