@@ -37,7 +37,7 @@ VIDEO_URL = "https://files.catbox.moe/wio4kl.mp4"
 NEW_BUTTON_URL = "https://t.me/+MCK7uxy2gtc0ZTg0"
 
 # رابط القناة المباشر للزر الثاني
-CHANNEL_URL = "https://t.me/+EqB5W8oU2gNmYjll"
+CHANNEL_URL = "https://t.me/+Zp-CnNxHMdJiMWE1"
 
 
 def get_welcome_text(first_name):
