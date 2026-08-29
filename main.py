@@ -19,6 +19,12 @@ PROOF_CHANNEL_URL = "https://t.me/FPHTE"
 PROOF_CHANNEL_ID = "@FPHTE"
 VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
 
+# عناوين أزرار القائمة (Reply Keyboard)
+BTN_VIP_TEXT = "🔞 כניסה לערוץ ה-VIP"
+BTN_LINK_TEXT = "🔗 הקישור האישי שלי לנקודות"
+BTN_STATS_TEXT = "📊 סטטיסטיקת הנקודות שלי"
+BTN_PROOF_TEXT = "✅ ערוץ הוכחות ואמינות"
+
 app = Flask(__name__)
 
 @app.route("/")
@@ -47,7 +53,7 @@ def is_user_subscribed(user_id):
     except Exception:
         return True
 
-# --- رسالة طلب الاشتراك الإجباري ---
+# --- رسالة طلب الاشتراك الإجباري (تستخدم أزرار Inline للتأكد من الاشتراك) ---
 def send_force_sub_message(chat_id, referrer_id=None):
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_sub = telebot.types.InlineKeyboardButton("📢 לחץ כאן להצטרפות לערוץ", url=FORCE_SUB_CHANNEL_LINK)
@@ -88,12 +94,13 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
+# --- قائمة الأزرار الرئيسية في مكان الكتابة (Reply Keyboard) ---
 def get_main_keyboard():
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
-    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי לנקודות", callback_data="get_link")
-    btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות שלי", callback_data="get_stats")
-    btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות ואמינות", url=PROOF_CHANNEL_URL)
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    btn_vip = telebot.types.KeyboardButton(BTN_VIP_TEXT)
+    btn_link = telebot.types.KeyboardButton(BTN_LINK_TEXT)
+    btn_stats = telebot.types.KeyboardButton(BTN_STATS_TEXT)
+    btn_proof = telebot.types.KeyboardButton(BTN_PROOF_TEXT)
     
     markup.add(btn_vip, btn_link, btn_stats, btn_proof)
     return markup
@@ -121,7 +128,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
     user = users_col.find_one({"user_id": user_id})
 
     if not user:
-        # مستخدم جديد لأول مرة
+        # مستخدم جديد لأול مرة
         initial_points = 5
         referrer_name = None
 
@@ -136,7 +143,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                     {"$set": {"points": new_points, "referrals": new_referrals}}
                 )
                 
-                # إرسال إشعار فوري ومفصل للداعي باللغة العبرية
+                # إرسال إشعار للداعي
                 try:
                     bot.send_message(
                         referrer_id,
@@ -160,7 +167,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "referrer_name": referrer_name
         })
 
-        # إرسال الرسالة الأولى للمستخدم الجديد باسم الداعي
+        # إرسال الرسالة الأولى مع الأزرار الرئيسية
         bot.send_message(
             user_id,
             get_first_welcome_text(first_name, referrer_name),
@@ -176,7 +183,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             pass
 
     else:
-        # مستخدم سابق يضغط /start من جديد
+        # مستخدم سابق
         points = user.get("points", 0)
         bot.send_message(
             user_id,
@@ -185,7 +192,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             reply_markup=get_main_keyboard()
         )
 
-# --- معالجة الأزرار الشفافة ---
+# --- معالجة الضغط على أزرار التحقق الحصرية للتحقق من الاشتراك والإدارة ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
@@ -206,82 +213,6 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ עדיין לא הצטרפת לערוץ! אנא הצטרף ונסה שוב.", show_alert=True)
         return
 
-    user = users_col.find_one({"user_id": user_id})
-    points = user.get("points", 0) if user else 0
-
-    # الزر الأول: دخول القناة الخاصة VIP
-    if call.data == "check_vip":
-        if points < 50:
-            alert_text = (
-                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
-                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
-                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
-            )
-            bot.answer_callback_query(call.id, alert_text, show_alert=True)
-        else:
-            bot.answer_callback_query(call.id)
-            bot.send_message(
-                user_id,
-                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
-                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
-                parse_mode="HTML"
-            )
-
-            # إرسال بطاقة الإثبات للقناة
-            if user and not user.get("claimed_vip", False):
-                users_col.update_one({"user_id": user_id}, {"$set": {"claimed_vip": True}})
-                
-                now_str = datetime.now().strftime("%Y-%m-%d | %H:%M")
-                proof_text = (
-                    f"🥳 <b>ברכות! משתמש קיבל גישה מיידית!</b>\n\n"
-                    f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
-                    f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
-                    f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
-                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
-                )
-                
-                proof_markup = telebot.types.InlineKeyboardMarkup()
-                proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
-
-                try:
-                    bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
-                except Exception as e:
-                    print(f"Error sending proof: {e}")
-
-    # الزر الثاني: رابط الدعوة الخاص (مع زر مشاركة مباشر)
-    elif call.data == "get_link":
-        bot.answer_callback_query(call.id)
-        ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
-        
-        share_msg = (
-            f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
-            f"<code>{ref_link}</code>\n\n"
-            f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
-            f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
-        )
-        
-        # زر المشاركة المباشر
-        share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
-        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
-        
-        link_markup = telebot.types.InlineKeyboardMarkup()
-        link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
-
-        bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
-
-    # الزر الثالث: إحصائيات النقاط
-    elif call.data == "get_stats":
-        bot.answer_callback_query(call.id)
-        referrals = user.get("referrals", 0) if user else 0
-        stats_msg = (
-            f"📊 <b>סטטיסטיקת החשבון שלך:</b>\n\n"
-            f"👤 שם: <b>{first_name}</b>\n"
-            f"💎 נקודות ברשותך: <b>{points} / 50</b>\n"
-            f"👥 חברים שהזמנת: <b>{referrals}</b>\n\n"
-            f"🎯 נותרו לך עוד <b>{max(0, 50 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
-        )
-        bot.send_message(user_id, stats_msg, parse_mode="HTML")
-
     # رد الأدمن
     elif call.data.startswith("reply_"):
         target_user = call.data.split("_")[1]
@@ -291,14 +222,12 @@ def handle_callbacks(call):
 
 # --- أوامر الأدمن الإدارية ---
 
-# 1. إحصائيات المشتركين
 @bot.message_handler(commands=["stats"])
 def stats(message):
     if message.chat.id == ADMIN_ID:
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="Markdown")
 
-# 2. أمر لمسح مستخدم معين للتجربة (/del 123456789)
 @bot.message_handler(commands=["del"])
 def delete_user(message):
     if message.chat.id == ADMIN_ID:
@@ -307,20 +236,21 @@ def delete_user(message):
             target_id = int(args[1])
             res = users_col.delete_one({"user_id": target_id})
             if res.deleted_count > 0:
-                bot.reply_to(message, f"✅ تم مسح المستخدم `{target_id}` بنجاح من قاعدة البيانات!", parse_mode="Markdown")
+                bot.reply_to(message, f"✅ تم مسح المستخدم `{target_id}` بنجاح!", parse_mode="Markdown")
             else:
-                bot.reply_to(message, "❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات.")
+                bot.reply_to(message, "❌ لم يتم العثور على هذا المستخدم.")
         else:
-            bot.reply_to(message, "⚠️ يرجى كتابة الآيدي بعد الأمر، مثال:\n`/del 123456789`", parse_mode="Markdown")
+            bot.reply_to(message, "⚠️ يرجى كتابة الآيدي، مثال:\n`/del 123456789`", parse_mode="Markdown")
 
-# 3. أمر إعادة تعيين ومسح قاعدة البيانات بالكامل (/reset_all)
 @bot.message_handler(commands=["reset_all"])
 def reset_all_db(message):
     if message.chat.id == ADMIN_ID:
-        users_col.delete_many({})
-        bot.reply_to(message, "🚨 **تم مسح جميع المشتركين وإعادة تعيين قاعدة البيانات بالكامل!**", parse_mode="Markdown")
+        try:
+            users_col.delete_many({})
+            bot.send_message(ADMIN_ID, "🚨 **تم مسح جميع المشتركين وإعادة تعيين قاعدة البيانات بالكامل!**", parse_mode="Markdown")
+        except Exception as e:
+            bot.send_message(ADMIN_ID, f"❌ حدث خطأ أثناء المسح: `{e}`", parse_mode="Markdown")
 
-# 4. إذاعة الأدمن
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]))
 def broadcast(message):
     users = users_col.find()
@@ -355,13 +285,94 @@ def broadcast(message):
         parse_mode="Markdown"
     )
 
-# تحويل الرسائل للأدمن
+# --- معالجة ضغطة أزرار القائمة (Reply Keyboard) من قِبل المستخدمين ---
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
-def forward(message):
-    try: 
-        bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
-    except: 
-        pass
+def handle_text_messages(message):
+    user_id = message.chat.id
+    first_name = message.from_user.first_name
+    text = message.text
+
+    user = users_col.find_one({"user_id": user_id})
+    points = user.get("points", 0) if user else 0
+
+    # 1. زر دخول VIP
+    if text == BTN_VIP_TEXT:
+        if points < 50:
+            msg_text = (
+                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
+                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
+                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
+            )
+            bot.send_message(user_id, msg_text)
+        else:
+            bot.send_message(
+                user_id,
+                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
+                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
+                parse_mode="HTML"
+            )
+
+            if user and not user.get("claimed_vip", False):
+                users_col.update_one({"user_id": user_id}, {"$set": {"claimed_vip": True}})
+                
+                now_str = datetime.now().strftime("%Y-%m-%d | %H:%M")
+                proof_text = (
+                    f"🥳 <b>ברכות! משתמש קיבל גישה מיידית!</b>\n\n"
+                    f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
+                    f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
+                    f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
+                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
+                )
+                
+                proof_markup = telebot.types.InlineKeyboardMarkup()
+                proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
+
+                try:
+                    bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
+                except Exception as e:
+                    print(f"Error sending proof: {e}")
+
+    # 2. زر رابط الدعوة
+    elif text == BTN_LINK_TEXT:
+        ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+        
+        share_msg = (
+            f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
+            f"<code>{ref_link}</code>\n\n"
+            f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
+            f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
+        )
+        
+        share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
+        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
+        
+        link_markup = telebot.types.InlineKeyboardMarkup()
+        link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
+
+        bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
+
+    # 3. زر الإحصائيات
+    elif text == BTN_STATS_TEXT:
+        referrals = user.get("referrals", 0) if user else 0
+        stats_msg = (
+            f"📊 <b>סטטיסטיקת החשבון שלך:</b>\n\n"
+            f"👤 שם: <b>{first_name}</b>\n"
+            f"💎 נקודות ברשותך: <b>{points} / 50</b>\n"
+            f"👥 חברים שהזמנת: <b>{referrals}</b>\n\n"
+            f"🎯 נותרו לך עוד <b>{max(0, 50 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
+        )
+        bot.send_message(user_id, stats_msg, parse_mode="HTML")
+
+    # 4. زر قناة الإثباتات
+    elif text == BTN_PROOF_TEXT:
+        bot.send_message(user_id, f"✅ ערוץ הוכחות ואמינות:\n{PROOF_CHANNEL_URL}")
+
+    # إذا أرسل المستخدم رسالة عادية، يتم تحويلها للأدمن
+    else:
+        try: 
+            bot.forward_message(ADMIN_ID, user_id, message.message_id)
+        except: 
+            pass
 
 if __name__ == "__main__":
     Thread(target=run_web).start()
