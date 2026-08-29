@@ -47,7 +47,7 @@ def is_user_subscribed(user_id):
     except Exception:
         return True
 
-# --- رسالة طلب الاشتراك الإجباري (نصوص عبرية سليمة 100%) ---
+# --- رسالة طلب الاشتراك الإجباري ---
 def send_force_sub_message(chat_id, referrer_id=None):
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_sub = telebot.types.InlineKeyboardButton("📢 לחץ כאן להצטרפות לערוץ", url=FORCE_SUB_CHANNEL_LINK)
@@ -64,7 +64,7 @@ def send_force_sub_message(chat_id, referrer_id=None):
     )
     bot.send_message(chat_id, msg_text, parse_mode="HTML", reply_markup=markup)
 
-# --- نص الترحيب في المرة الأولى (نصوص عبرية دقيقة) ---
+# --- نص الترحيب في المرة الأولى ---
 def get_first_welcome_text(first_name, referrer_name=None):
     ref_header = f"👤 הוזמנת על ידי: <b>{referrer_name}</b> והוא קיבל 5 נקודות!\n\n" if referrer_name else ""
     return (
@@ -77,7 +77,7 @@ def get_first_welcome_text(first_name, referrer_name=None):
         f"</blockquote>"
     )
 
-# --- نص الترحيب عند الضغط على /start مرة أخرى (عبري صحيح تماماً) ---
+# --- نص الترحيب عند الضغط على /start مرة أخرى ---
 def get_returning_welcome_text(first_name, points):
     return (
         f"<blockquote>"
@@ -98,7 +98,7 @@ def get_main_keyboard():
     markup.add(btn_vip, btn_link, btn_stats, btn_proof)
     return markup
 
-# --- معالج أمر START حصرياً ---
+# --- معالج أمر START ---
 @bot.message_handler(commands=["start"])
 def start(message):
     user_id = message.chat.id
@@ -136,7 +136,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                     {"$set": {"points": new_points, "referrals": new_referrals}}
                 )
                 
-                # إرسال إشعار فوري ومفصل للداعي باللغة العبرية الصحيحة
+                # إرسال إشعار فوري ومفصل للداعي باللغة العبرية
                 try:
                     bot.send_message(
                         referrer_id,
@@ -260,7 +260,7 @@ def handle_callbacks(call):
             f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
         )
         
-        # إنشاء زر المشاركة الشفاف
+        # زر المشاركة المباشر
         share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
         share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
         
@@ -269,7 +269,7 @@ def handle_callbacks(call):
 
         bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
 
-    # الزر الثالث: إحصائيات النقاط (عبري دقيق)
+    # الزر الثالث: إحصائيات النقاط
     elif call.data == "get_stats":
         bot.answer_callback_query(call.id)
         referrals = user.get("referrals", 0) if user else 0
@@ -287,16 +287,40 @@ def handle_callbacks(call):
         target_user = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_user
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
-        bot.send_message(ADMIN_ID, f"✍️ اكتب הرد للمستخدم `{target_user}`:", parse_mode="Markdown")
+        bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_user}`:", parse_mode="Markdown")
 
-# --- أوامر الأدمن ---
+# --- أوامر الأدمن الإدارية ---
+
+# 1. إحصائيات المشتركين
 @bot.message_handler(commands=["stats"])
 def stats(message):
     if message.chat.id == ADMIN_ID:
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="Markdown")
 
-# إذاعة الأدمن
+# 2. أمر لمسح مستخدم معين للتجربة (/del 123456789)
+@bot.message_handler(commands=["del"])
+def delete_user(message):
+    if message.chat.id == ADMIN_ID:
+        args = message.text.split()
+        if len(args) > 1 and args[1].isdigit():
+            target_id = int(args[1])
+            res = users_col.delete_one({"user_id": target_id})
+            if res.deleted_count > 0:
+                bot.reply_to(message, f"✅ تم مسح المستخدم `{target_id}` بنجاح من قاعدة البيانات!", parse_mode="Markdown")
+            else:
+                bot.reply_to(message, "❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات.")
+        else:
+            bot.reply_to(message, "⚠️ يرجى كتابة الآيدي بعد الأمر، مثال:\n`/del 123456789`", parse_mode="Markdown")
+
+# 3. أمر إعادة تعيين ومسح قاعدة البيانات بالكامل (/reset_all)
+@bot.message_handler(commands=["reset_all"])
+def reset_all_db(message):
+    if message.chat.id == ADMIN_ID:
+        users_col.delete_many({})
+        bot.reply_to(message, "🚨 **تم مسح جميع المشتركين وإعادة تعيين قاعدة البيانات بالكامل!**", parse_mode="Markdown")
+
+# 4. إذاعة الأدمن
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]))
 def broadcast(message):
     users = users_col.find()
