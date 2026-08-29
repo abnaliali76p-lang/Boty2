@@ -53,7 +53,7 @@ def is_user_subscribed(user_id):
     except Exception:
         return True
 
-# --- رسالة طلب الاشتراك الإجباري (تستخدم أزرار Inline للتأكد من الاشتراك) ---
+# --- رسالة طلب الاشتراك الإجباري ---
 def send_force_sub_message(chat_id, referrer_id=None):
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_sub = telebot.types.InlineKeyboardButton("📢 לחץ כאן להצטרפות לערוץ", url=FORCE_SUB_CHANNEL_LINK)
@@ -94,8 +94,19 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الرئيسية في مكان الكتابة (Reply Keyboard) ---
-def get_main_keyboard():
+# --- 1. قائمة الأزرار الشفافة (Inline Keyboard) المرفقة بالرسالة ---
+def get_inline_keyboard():
+    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
+    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי לנקודות", callback_data="get_link")
+    btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות שלי", callback_data="get_stats")
+    btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות ואמינות", url=PROOF_CHANNEL_URL)
+    
+    markup.add(btn_vip, btn_link, btn_stats, btn_proof)
+    return markup
+
+# --- 2. أزرار القائمة أسفل الشاشة (Reply Keyboard) ---
+def get_reply_keyboard():
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     btn_vip = telebot.types.KeyboardButton(BTN_VIP_TEXT)
     btn_link = telebot.types.KeyboardButton(BTN_LINK_TEXT)
@@ -128,7 +139,6 @@ def process_user_registration(user_id, first_name, referrer_id=None):
     user = users_col.find_one({"user_id": user_id})
 
     if not user:
-        # مستخدم جديد لأול مرة
         initial_points = 5
         referrer_name = None
 
@@ -143,7 +153,6 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                     {"$set": {"points": new_points, "referrals": new_referrals}}
                 )
                 
-                # إرسال إشعار للداعي
                 try:
                     bot.send_message(
                         referrer_id,
@@ -156,7 +165,6 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                 except:
                     pass
 
-        # حفظ العضو في MongoDB
         users_col.insert_one({
             "user_id": user_id,
             "name": first_name,
@@ -167,12 +175,15 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "referrer_name": referrer_name
         })
 
-        # إرسال الرسالة الأولى مع الأزرار الرئيسية
+        # تثبيت أزرار القائمة أسفل الشاشة
+        bot.send_message(user_id, "<b>תפריט הבוט הופעל בהצלחה! 👇</b>", parse_mode="HTML", reply_markup=get_reply_keyboard())
+
+        # إرسال الرسالة مع الأزرار الشفافة
         bot.send_message(
             user_id,
             get_first_welcome_text(first_name, referrer_name),
             parse_mode="HTML",
-            reply_markup=get_main_keyboard()
+            reply_markup=get_inline_keyboard()
         )
 
         try:
@@ -183,22 +194,25 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             pass
 
     else:
-        # مستخدم سابق
         points = user.get("points", 0)
+        
+        # تثبيت أزرار القائمة أسفل الشاشة
+        bot.send_message(user_id, "<b>תפריט הבוט הופעל בהצלחה! 👇</b>", parse_mode="HTML", reply_markup=get_reply_keyboard())
+
+        # إرسال الرسالة مع الأزرار الشفافة
         bot.send_message(
             user_id,
             get_returning_welcome_text(first_name, points),
             parse_mode="HTML",
-            reply_markup=get_main_keyboard()
+            reply_markup=get_inline_keyboard()
         )
 
-# --- معالجة الضغط على أزرار التحقق الحصرية للتحقق من الاشتراك والإدارة ---
+# --- معالجة الأزرار الشفافة (Inline Keyboard) ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
     first_name = call.from_user.first_name
 
-    # فحص زر التحقق من الاشتراك الإجباري
     if call.data.startswith("check_sub_"):
         if is_user_subscribed(user_id):
             bot.answer_callback_query(call.id, "✅ הצטרפותך אושרה בהצלחה!")
@@ -213,7 +227,77 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ עדיין לא הצטרפת לערוץ! אנא הצטרף ונסה שוב.", show_alert=True)
         return
 
-    # رد الأدمن
+    user = users_col.find_one({"user_id": user_id})
+    points = user.get("points", 0) if user else 0
+
+    if call.data == "check_vip":
+        if points < 50:
+            alert_text = (
+                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
+                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
+                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
+            )
+            bot.answer_callback_query(call.id, alert_text, show_alert=True)
+        else:
+            bot.answer_callback_query(call.id)
+            bot.send_message(
+                user_id,
+                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
+                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
+                parse_mode="HTML"
+            )
+
+            if user and not user.get("claimed_vip", False):
+                users_col.update_one({"user_id": user_id}, {"$set": {"claimed_vip": True}})
+                
+                now_str = datetime.now().strftime("%Y-%m-%d | %H:%M")
+                proof_text = (
+                    f"🥳 <b>ברכות! משתמש קיבל גישה מיידית!</b>\n\n"
+                    f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
+                    f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
+                    f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
+                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
+                )
+                
+                proof_markup = telebot.types.InlineKeyboardMarkup()
+                proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
+
+                try:
+                    bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
+                except Exception as e:
+                    print(f"Error sending proof: {e}")
+
+    elif call.data == "get_link":
+        bot.answer_callback_query(call.id)
+        ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+        
+        share_msg = (
+            f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
+            f"<code>{ref_link}</code>\n\n"
+            f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
+            f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
+        )
+        
+        share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
+        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
+        
+        link_markup = telebot.types.InlineKeyboardMarkup()
+        link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
+
+        bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
+
+    elif call.data == "get_stats":
+        bot.answer_callback_query(call.id)
+        referrals = user.get("referrals", 0) if user else 0
+        stats_msg = (
+            f"📊 <b>סטטיסטיקת החשבון שלך:</b>\n\n"
+            f"👤 שם: <b>{first_name}</b>\n"
+            f"💎 נקודות ברשותך: <b>{points} / 50</b>\n"
+            f"👥 חברים שהזמנת: <b>{referrals}</b>\n\n"
+            f"🎯 נותרו לך עוד <b>{max(0, 50 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
+        )
+        bot.send_message(user_id, stats_msg, parse_mode="HTML")
+
     elif call.data.startswith("reply_"):
         target_user = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_user
@@ -295,7 +379,6 @@ def handle_text_messages(message):
     user = users_col.find_one({"user_id": user_id})
     points = user.get("points", 0) if user else 0
 
-    # 1. زر دخول VIP
     if text == BTN_VIP_TEXT:
         if points < 50:
             msg_text = (
@@ -332,7 +415,6 @@ def handle_text_messages(message):
                 except Exception as e:
                     print(f"Error sending proof: {e}")
 
-    # 2. زر رابط الدعوة
     elif text == BTN_LINK_TEXT:
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
         
@@ -351,7 +433,6 @@ def handle_text_messages(message):
 
         bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
 
-    # 3. زر الإحصائيات
     elif text == BTN_STATS_TEXT:
         referrals = user.get("referrals", 0) if user else 0
         stats_msg = (
@@ -363,11 +444,9 @@ def handle_text_messages(message):
         )
         bot.send_message(user_id, stats_msg, parse_mode="HTML")
 
-    # 4. زر قناة الإثباتات
     elif text == BTN_PROOF_TEXT:
         bot.send_message(user_id, f"✅ ערוץ הוכחות ואמינות:\n{PROOF_CHANNEL_URL}")
 
-    # إذا أرسل المستخدم رسالة عادية، يتم تحويلها للأدمن
     else:
         try: 
             bot.forward_message(ADMIN_ID, user_id, message.message_id)
