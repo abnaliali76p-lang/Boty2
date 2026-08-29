@@ -47,7 +47,7 @@ def is_user_subscribed(user_id):
     except Exception:
         return True
 
-# --- رسالة طلب الاشتراك الإجباري ---
+# --- رسالة طلب الاشتراك الإجباري (نصوص عبرية سليمة 100%) ---
 def send_force_sub_message(chat_id, referrer_id=None):
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_sub = telebot.types.InlineKeyboardButton("📢 לחץ כאן להצטרפות לערוץ", url=FORCE_SUB_CHANNEL_LINK)
@@ -58,13 +58,13 @@ def send_force_sub_message(chat_id, referrer_id=None):
     markup.add(btn_sub, btn_check)
 
     msg_text = (
-        "⚠️ <b>על מנת להשתמש בבוט עליך להצטרף לערוץ ההוכחות שלנו תחילה!</b>\n\n"
+        "⚠️ <b>על מנת להשתמש בבוט, עליך להצטרף לערוץ ההוכחות שלנו תחילה!</b>\n\n"
         "1️⃣ לחץ על הכפתור למטה והצטרף לערוץ.\n"
-        "2️⃣ לאחר ההצטרפות לחץ על <b>'אימות הצטרפות'</b> כדי להתחיל."
+        "2️⃣ לאחר ההצטרפות, לחץ על <b>'אימות הצטרפות'</b> כדי להתחיל."
     )
     bot.send_message(chat_id, msg_text, parse_mode="HTML", reply_markup=markup)
 
-# --- نص الترحيب في المرة الأولى (عرض اسم الداعي كنص عادي) ---
+# --- نص الترحيب في المرة الأولى (نصوص عبرية دقيقة) ---
 def get_first_welcome_text(first_name, referrer_name=None):
     ref_header = f"👤 הוזמנת על ידי: <b>{referrer_name}</b> והוא קיבל 5 נקודות!\n\n" if referrer_name else ""
     return (
@@ -72,19 +72,19 @@ def get_first_welcome_text(first_name, referrer_name=None):
         f"<blockquote>"
         f"<b>👋 שלום {first_name}!</b>\n"
         f"<b>ברוכים הבאים לבוט הכי לוהט בישראל! 🔥🔞</b>\n\n"
-        f"🎁 קיבלת 5 נקודות בונוס הצטרפות!\n\n"
-        f"<b>הזמינו חברים וצברו נקודות לגישה מלאה! 👇</b>"
+        f"🎁 קיבלת 5 נקודות בונוס על ההצטרפות!\n\n"
+        f"<b>הזמן חברים וצבר נקודות לגישה מלאה! 👇</b>"
         f"</blockquote>"
     )
 
-# --- نص الترحيب عند الضغط على /start مرة أخرى ---
+# --- نص الترحيب عند الضغط على /start مرة أخرى (عبري صحيح تماماً) ---
 def get_returning_welcome_text(first_name, points):
     return (
         f"<blockquote>"
         f"<b>👋 שלום {first_name}!</b>\n"
         f"<b>ברוכים הבאים לבוט הכי לוהט בישראל! 🔥🔞</b>\n\n"
         f"💎 <b>הנקודות שלך כעת: {points}/25</b>\n\n"
-        f"<b>השתמש בלחצנים למטה לניווט בבוט 👇</b>"
+        f"<b>השתמש בכפתורים למטה כדי לנווט בבוט 👇</b>"
         f"</blockquote>"
     )
 
@@ -136,7 +136,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                     {"$set": {"points": new_points, "referrals": new_referrals}}
                 )
                 
-                # إرسال إشعار فوري ومفصل للداعي باللغة العبرية
+                # إرسال إشعار فوري ومفصل للداعي باللغة العبرية الصحيحة
                 try:
                     bot.send_message(
                         referrer_id,
@@ -213,17 +213,17 @@ def handle_callbacks(call):
     if call.data == "check_vip":
         if points < 25:
             alert_text = (
-                f"❌ מצטערים! יש לך {points} נקודות בלבד.\n\n"
-                f"🔒 לכניסה לערוץ ה-VIP עליך לצבור 25 נקודות.\n"
-                f"📲 עבור כל חבר שתזמין תקבל 5 נקודות!"
+                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
+                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 25 נקודות.\n"
+                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
             )
             bot.answer_callback_query(call.id, alert_text, show_alert=True)
         else:
             bot.answer_callback_query(call.id)
             bot.send_message(
                 user_id,
-                f"🎉 <b>ברכות! הגעת ל-25 נקודות!</b>\n\n"
-                f"🔗 הנה הקישור לערוץ ה-VIP הבלעדי שלך:\n{VIP_CHANNEL_URL}",
+                f"🎉 <b>כל הכבוד! הגעת ל-25 נקודות!</b>\n\n"
+                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
                 parse_mode="HTML"
             )
 
@@ -248,26 +248,35 @@ def handle_callbacks(call):
                 except Exception as e:
                     print(f"Error sending proof: {e}")
 
-    # الزر الثاني: رابط الدعوة الخاص
+    # الزر الثاني: رابط الدعوة الخاص (مع زر مشاركة مباشر)
     elif call.data == "get_link":
         bot.answer_callback_query(call.id)
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+        
         share_msg = (
             f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
             f"<code>{ref_link}</code>\n\n"
-            f"📲 שתף את הקישור בקבוצות או לחברים.\n"
+            f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
             f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
         )
-        bot.send_message(user_id, share_msg, parse_mode="HTML")
+        
+        # إنشاء زر المشاركة الشفاف
+        share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
+        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
+        
+        link_markup = telebot.types.InlineKeyboardMarkup()
+        link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
 
-    # الزر الثالث: إحصائيات النقاط
+        bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
+
+    # الزر الثالث: إحصائيات النقاط (عبري دقيق)
     elif call.data == "get_stats":
         bot.answer_callback_query(call.id)
         referrals = user.get("referrals", 0) if user else 0
         stats_msg = (
             f"📊 <b>סטטיסטיקת החשבון שלך:</b>\n\n"
             f"👤 שם: <b>{first_name}</b>\n"
-            f"💎 נקודות שברשותך: <b>{points} / 25</b>\n"
+            f"💎 נקודות ברשותך: <b>{points} / 25</b>\n"
             f"👥 חברים שהזמנת: <b>{referrals}</b>\n\n"
             f"🎯 נותרו לך עוד <b>{max(0, 25 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
         )
@@ -278,7 +287,7 @@ def handle_callbacks(call):
         target_user = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_user
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
-        bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_user}`:", parse_mode="Markdown")
+        bot.send_message(ADMIN_ID, f"✍️ اكتب הرد للمستخدم `{target_user}`:", parse_mode="Markdown")
 
 # --- أوامر الأدمن ---
 @bot.message_handler(commands=["stats"])
@@ -317,7 +326,7 @@ def broadcast(message):
         ADMIN_ID, 
         f"📊 **تقرير الإذاعة:**\n\n"
         f"✅ تم الإرسال بنجاح: `{count}`\n"
-        f"🗑️ تم حذف المحظורين/الوهميين: `{deleted_count}`\n"
+        f"🗑️ تم حذف المحظورين/الوهميين: `{deleted_count}`\n"
         f"❌ أخطاء أخرى: `{fail_count}`",
         parse_mode="Markdown"
     )
