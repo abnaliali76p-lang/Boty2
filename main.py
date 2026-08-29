@@ -83,7 +83,7 @@ def get_returning_welcome_text(first_name, points):
         f"<blockquote>"
         f"<b>👋 שלום {first_name}!</b>\n"
         f"<b>ברוכים הבאים לבוט הכי לוהט בישראל! 🔥🔞</b>\n\n"
-        f"💎 <b>הנקודות שלך כעת: {points}/25</b>\n\n"
+        f"💎 <b>הנקודות שלך כעת: {points}/50</b>\n\n"
         f"<b>השתמש בכפתורים למטה כדי לנווט בבוט 👇</b>"
         f"</blockquote>"
     )
@@ -211,10 +211,10 @@ def handle_callbacks(call):
 
     # الزر الأول: دخول القناة الخاصة VIP
     if call.data == "check_vip":
-        if points < 25:
+        if points < 50:
             alert_text = (
                 f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
-                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 25 נקודות.\n"
+                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
                 f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
             )
             bot.answer_callback_query(call.id, alert_text, show_alert=True)
@@ -222,7 +222,7 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id)
             bot.send_message(
                 user_id,
-                f"🎉 <b>כל הכבוד! הגעת ל-25 נקודות!</b>\n\n"
+                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
                 f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
                 parse_mode="HTML"
             )
@@ -237,7 +237,7 @@ def handle_callbacks(call):
                     f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
                     f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
                     f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
-                    f"💎 <b>נקודות שנצברו:</b> 25 נקודות ✅"
+                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
                 )
                 
                 proof_markup = telebot.types.InlineKeyboardMarkup()
@@ -276,9 +276,9 @@ def handle_callbacks(call):
         stats_msg = (
             f"📊 <b>סטטיסטיקת החשבון שלך:</b>\n\n"
             f"👤 שם: <b>{first_name}</b>\n"
-            f"💎 נקודות ברשותך: <b>{points} / 25</b>\n"
+            f"💎 נקודות ברשותך: <b>{points} / 50</b>\n"
             f"👥 חברים שהזמנת: <b>{referrals}</b>\n\n"
-            f"🎯 נותרו לך עוד <b>{max(0, 25 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
+            f"🎯 נותרו לך עוד <b>{max(0, 50 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
         )
         bot.send_message(user_id, stats_msg, parse_mode="HTML")
 
