@@ -79,7 +79,7 @@ def get_first_welcome_text(first_name, referrer_name=None):
         f"<b>👋 שלום {first_name}!</b>\n"
         f"<b>ברוכים הבאים לבוט הכי לוהט בישראל! 🔥🔞</b>\n\n"
         f"🎁 קיבלת 5 נקודות בונוס על ההצטרפות!\n\n"
-        f"<b>הזמן חברים וצבר נקודות לגישה מלאה! 👇</b>"
+        f"<b>השתמש בכפתורים למטה כדי לנווט בבוט 👇</b>"
         f"</blockquote>"
     )
 
@@ -101,17 +101,6 @@ def get_inline_keyboard():
     btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי לנקודות", callback_data="get_link")
     btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות שלי", callback_data="get_stats")
     btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות ואמינות", url=PROOF_CHANNEL_URL)
-    
-    markup.add(btn_vip, btn_link, btn_stats, btn_proof)
-    return markup
-
-# --- 2. أزرار القائمة أسفل الشاشة (Reply Keyboard) ---
-def get_reply_keyboard():
-    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    btn_vip = telebot.types.KeyboardButton(BTN_VIP_TEXT)
-    btn_link = telebot.types.KeyboardButton(BTN_LINK_TEXT)
-    btn_stats = telebot.types.KeyboardButton(BTN_STATS_TEXT)
-    btn_proof = telebot.types.KeyboardButton(BTN_PROOF_TEXT)
     
     markup.add(btn_vip, btn_link, btn_stats, btn_proof)
     return markup
@@ -175,10 +164,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "referrer_name": referrer_name
         })
 
-        # تثبيت أزرار القائمة أسفل الشاشة
-        bot.send_message(user_id, "<b>תפריט הבוט הופעל בהצלחה! 👇</b>", parse_mode="HTML", reply_markup=get_reply_keyboard())
-
-        # إرسال الرسالة مع الأزرار الشفافة
+        # إرسال الرسالة مع الأزرار الشفافة فقط وبدون فتح القائمة السفلية تلقائياً
         bot.send_message(
             user_id,
             get_first_welcome_text(first_name, referrer_name),
@@ -196,10 +182,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
     else:
         points = user.get("points", 0)
         
-        # تثبيت أزرار القائمة أسفل الشاشة
-        bot.send_message(user_id, "<b>תפריט הבוט הופעל בהצלחה! 👇</b>", parse_mode="HTML", reply_markup=get_reply_keyboard())
-
-        # إرسال الرسالة مع الأزرار الشفافة
+        # إرسال الرسالة مع الأزرار الشفافة فقط وبدون فتح القائمة السفلية تلقائياً
         bot.send_message(
             user_id,
             get_returning_welcome_text(first_name, points),
@@ -369,7 +352,7 @@ def broadcast(message):
         parse_mode="Markdown"
     )
 
-# --- معالجة ضغطة أزرار القائمة (Reply Keyboard) من قِبل المستخدمين ---
+# --- معالجة الرسائل العادية من قبل المستخدمين ---
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
 def handle_text_messages(message):
     user_id = message.chat.id
