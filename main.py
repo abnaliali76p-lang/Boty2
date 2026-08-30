@@ -21,6 +21,7 @@ FORCE_SUB_CHANNEL_LINK = "https://t.me/+Fjt6_udvGoY3ZGRk"
 PROOF_CHANNEL_URL = "https://t.me/FPHTE"
 PROOF_CHANNEL_ID = "@FPHTE"
 VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
+BOOST_URL = "https://t.me/boost/FPHTE"
 
 # عناوين أزرار القائمة (Reply Keyboard)
 BTN_VIP_TEXT = "🔞 כניסה לערוץ ה-VIP"
@@ -103,15 +104,24 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة (Inline Keyboard) ---
+# --- قائمة الأزرار الشفافة التفاعلية (التنسيق الجديد المطلوب) ---
 def get_inline_keyboard():
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
-    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי לנקודות", callback_data="get_link")
-    btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות שלי", callback_data="get_stats")
-    btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות ואמינות", url=PROOF_CHANNEL_URL)
+    markup = telebot.types.InlineKeyboardMarkup()
     
-    markup.add(btn_vip, btn_link, btn_stats, btn_proof)
+    # السطر الأول: زر كامل العرض
+    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
+    markup.row(btn_vip)
+    
+    # السطر الثاني: زرين بجانب بعضهما
+    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי", callback_data="get_link")
+    btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות", callback_data="get_stats")
+    markup.row(btn_link, btn_stats)
+    
+    # السطر الثالث: زرين بجانب بعضهما
+    btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות", url=PROOF_CHANNEL_URL)
+    btn_gift = telebot.types.InlineKeyboardButton("🎁 לקבלת מתנה", callback_data="get_boost_gift")
+    markup.row(btn_proof, btn_gift)
+    
     return markup
 
 # --- معالجة المطالبة برابط الهدية ---
@@ -345,6 +355,21 @@ def handle_callbacks(call):
         )
         bot.send_message(user_id, stats_msg, parse_mode="HTML")
 
+    elif call.data == "get_boost_gift":
+        bot.answer_callback_query(call.id)
+        
+        boost_text = (
+            "🚀 <b>חזק את הערוץ וקבל 5 נקודות באופן מיידי!</b>\n\n"
+            f"🔗 <b>קישור לחיזוק:</b>\n{BOOST_URL}\n\n"
+            "🎁 הניקוד שלך יתווסף לאחר הבוסט."
+        )
+        
+        boost_markup = telebot.types.InlineKeyboardMarkup()
+        btn_boost = telebot.types.InlineKeyboardButton("⚡ לחץ כאן לחיזוק הערוץ (Boost)", url=BOOST_URL)
+        boost_markup.add(btn_boost)
+
+        bot.send_message(user_id, boost_text, parse_mode="HTML", reply_markup=boost_markup, disable_web_page_preview=True)
+
     elif call.data.startswith("reply_"):
         target_user = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_user
@@ -353,7 +378,6 @@ def handle_callbacks(call):
 
 # --- أوامر الأدمن الإدارية ---
 
-# أمر إنشاء رابط هدية: /gift <النقاط> <عدد_الأشخاص>
 @bot.message_handler(commands=["gift"])
 def create_gift_link(message):
     if message.chat.id == ADMIN_ID:
@@ -362,7 +386,7 @@ def create_gift_link(message):
             points = int(args[1])
             max_users = int(args[2])
             
-            code = str(uuid.uuid4())[:8] # إنشاء كود فريد
+            code = str(uuid.uuid4())[:8]
             gifts_col.insert_one({
                 "code": code,
                 "points": points,
