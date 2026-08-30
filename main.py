@@ -104,25 +104,26 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة التفاعلية (التنسيق الجديد المطلوب) ---
+# --- قائمة الأزرار الشفافة التفاعلية (بأحجام أنيقة ومختصرة) ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
     
     # السطر الأول: زر كامل العرض
-    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
+    btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה ל-VIP", callback_data="check_vip")
     markup.row(btn_vip)
     
     # السطر الثاني: زرين بجانب بعضهما
-    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור האישי שלי", callback_data="get_link")
-    btn_stats = telebot.types.InlineKeyboardButton("📊 סטטיסטיקת הנקודות", callback_data="get_stats")
+    btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור שלי", callback_data="get_link")
+    btn_stats = telebot.types.InlineKeyboardButton("📊 הנקודות שלי", callback_data="get_stats")
     markup.row(btn_link, btn_stats)
     
     # السطر الثالث: زرين بجانب بعضهما
-    btn_proof = telebot.types.InlineKeyboardButton("✅ ערוץ הוכחות", url=PROOF_CHANNEL_URL)
-    btn_gift = telebot.types.InlineKeyboardButton("🎁 לקבלת מתנה", callback_data="get_boost_gift")
+    btn_proof = telebot.types.InlineKeyboardButton("✅ הוכחות", url=PROOF_CHANNEL_URL)
+    btn_gift = telebot.types.InlineKeyboardButton("🎁 קבלת מתנה", callback_data="get_boost_gift")
     markup.row(btn_proof, btn_gift)
     
     return markup
+
 
 # --- معالجة المطالبة برابط الهدية ---
 def claim_gift_code(user_id, first_name, code):
