@@ -1,6 +1,7 @@
 import os
 import time
 import telebot
+from urllib.parse import quote
 from pymongo import MongoClient
 from flask import Flask
 from threading import Thread
@@ -100,7 +101,7 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار השפافة (Inline Keyboard) ---
+# --- قائمة الأزرار الشفافة (Inline Keyboard) ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
@@ -128,7 +129,7 @@ def start(message):
 
     process_user_registration(user_id, first_name, referrer_id)
 
-# --- تسجيل ותفعيل المستخدم ---
+# --- تسجيل وتفعيل المستخدم ---
 def process_user_registration(user_id, first_name, referrer_id=None):
     user = users_col.find_one({"user_id": user_id})
 
@@ -281,7 +282,8 @@ def handle_callbacks(call):
         )
         
         share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
-        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
+        encoded_text = quote(share_text)
+        share_url = f"https://t.me/share/url?url={ref_link}&text={encoded_text}"
         
         link_markup = telebot.types.InlineKeyboardMarkup()
         link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
@@ -397,7 +399,8 @@ def handle_text_messages(message):
         )
         
         share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
-        share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
+        encoded_text = quote(share_text)
+        share_url = f"https://t.me/share/url?url={ref_link}&text={encoded_text}"
         
         link_markup = telebot.types.InlineKeyboardMarkup()
         link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
