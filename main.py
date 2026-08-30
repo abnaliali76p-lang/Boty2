@@ -94,7 +94,7 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- 1. قائمة الأزرار الشفافة (Inline Keyboard) المرفقة بالرسالة ---
+# --- قائمة الأزرار الشفافة (Inline Keyboard) ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
@@ -116,14 +116,13 @@ def start(message):
     if len(command_args) > 1 and command_args[1].isdigit():
         referrer_id = int(command_args[1])
 
-    # فحص الاشتراك الإجباري
     if not is_user_subscribed(user_id):
         send_force_sub_message(user_id, referrer_id)
         return
 
     process_user_registration(user_id, first_name, referrer_id)
 
-# --- تسجيل وتفعيل المستخدم ---
+# --- تسجيل ותفعيل المستخدم ---
 def process_user_registration(user_id, first_name, referrer_id=None):
     user = users_col.find_one({"user_id": user_id})
 
@@ -164,7 +163,6 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "referrer_name": referrer_name
         })
 
-        # إرسال الرسالة مع الأزرار الشفافة فقط وبدون فتح القائمة السفلية تلقائياً
         bot.send_message(
             user_id,
             get_first_welcome_text(first_name, referrer_name),
@@ -181,14 +179,60 @@ def process_user_registration(user_id, first_name, referrer_id=None):
 
     else:
         points = user.get("points", 0)
-        
-        # إرسال الرسالة مع الأزرار الشفافة فقط وبدون فتح القائمة السفلية تلقائياً
         bot.send_message(
             user_id,
             get_returning_welcome_text(first_name, points),
             parse_mode="HTML",
             reply_markup=get_inline_keyboard()
         )
+
+# --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات + خصم ה-50 نقطة ---
+def handle_vip_claim(user_id, points, user):
+    if points < 50:
+        alert_text = (
+            f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
+            f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
+            f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
+        )
+        return False, alert_text
+
+    # خصم 50 نقطة من رصيد المستخدم لإجباره على تجميع 50 نقطة أخرى
+    new_points = points - 50
+    users_col.update_one({"user_id": user_id}, {"$set": {"points": new_points, "claimed_vip": True}})
+
+    # إرسال رابط القناة للمستخدم
+    bot.send_message(
+        user_id,
+        f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
+        f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
+        parse_mode="HTML"
+    )
+
+    # تجهيز الوقت بتنسيق الساعة والدقائق فقط (HH:MM)
+    time_str = datetime.now().strftime("%H:%M")
+
+    # تنسيق رسالة الإثبات المطابق للصورة تماماً
+    proof_text = (
+        f"<blockquote>"
+        f"<b>ברכות! משתמש קיבל גישה מיידית! 🎉</b>"
+        f"</blockquote>\n"
+        f"<b>🆔 מזהה משתמש: {user_id}</b>\n"
+        f"<b>🌍 מדינה: ישראל 🇮🇱</b>\n"
+        f"<b>📅 תאריך ושעה: {time_str}</b>\n\n"
+        f"<blockquote>"
+        f"<b>💎 נקודות שנצברו: 50 נקודות ✅</b>"
+        f"</blockquote>"
+    )
+
+    proof_markup = telebot.types.InlineKeyboardMarkup()
+    proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
+
+    try:
+        bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
+    except Exception as e:
+        print(f"Error sending proof: {e}")
+
+    return True, None
 
 # --- معالجة الأزرار الشفافة (Inline Keyboard) ---
 @bot.callback_query_handler(func=lambda call: True)
@@ -214,41 +258,11 @@ def handle_callbacks(call):
     points = user.get("points", 0) if user else 0
 
     if call.data == "check_vip":
-        if points < 50:
-            alert_text = (
-                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
-                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
-                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
-            )
-            bot.answer_callback_query(call.id, alert_text, show_alert=True)
+        success, alert_msg = handle_vip_claim(user_id, points, user)
+        if not success:
+            bot.answer_callback_query(call.id, alert_msg, show_alert=True)
         else:
             bot.answer_callback_query(call.id)
-            bot.send_message(
-                user_id,
-                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
-                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
-                parse_mode="HTML"
-            )
-
-            if user and not user.get("claimed_vip", False):
-                users_col.update_one({"user_id": user_id}, {"$set": {"claimed_vip": True}})
-                
-                now_str = datetime.now().strftime("%Y-%m-%d | %H:%M")
-                proof_text = (
-                    f"🥳 <b>ברכות! משתמש קיבל גישה מיידית!</b>\n\n"
-                    f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
-                    f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
-                    f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
-                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
-                )
-                
-                proof_markup = telebot.types.InlineKeyboardMarkup()
-                proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
-
-                try:
-                    bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
-                except Exception as e:
-                    print(f"Error sending proof: {e}")
 
     elif call.data == "get_link":
         bot.answer_callback_query(call.id)
@@ -363,40 +377,9 @@ def handle_text_messages(message):
     points = user.get("points", 0) if user else 0
 
     if text == BTN_VIP_TEXT:
-        if points < 50:
-            msg_text = (
-                f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
-                f"🔒 כדי להיכנס לערוץ ה-VIP, עליך לצבור 50 נקודות.\n"
-                f"📲 עבור כל חבר שתזמין תרוויח 5 נקודות!"
-            )
-            bot.send_message(user_id, msg_text)
-        else:
-            bot.send_message(
-                user_id,
-                f"🎉 <b>כל הכבוד! הגעת ל-50 נקודות!</b>\n\n"
-                f"🔗 הנה הקישור הבלעדי שלך לערוץ ה-VIP:\n{VIP_CHANNEL_URL}",
-                parse_mode="HTML"
-            )
-
-            if user and not user.get("claimed_vip", False):
-                users_col.update_one({"user_id": user_id}, {"$set": {"claimed_vip": True}})
-                
-                now_str = datetime.now().strftime("%Y-%m-%d | %H:%M")
-                proof_text = (
-                    f"🥳 <b>ברכות! משתמש קיבל גישה מיידית!</b>\n\n"
-                    f"🆔 <b>מזהה משתמש:</b> <code>{user_id}</code>\n"
-                    f"🌍 <b>מדינה:</b> ישראל 🇮🇱\n"
-                    f"📅 <b>תאריך ושעה:</b> <code>{now_str}</code>\n"
-                    f"💎 <b>נקודות שנצברו:</b> 50 נקודות ✅"
-                )
-                
-                proof_markup = telebot.types.InlineKeyboardMarkup()
-                proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
-
-                try:
-                    bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
-                except Exception as e:
-                    print(f"Error sending proof: {e}")
+        success, alert_msg = handle_vip_claim(user_id, points, user)
+        if not success:
+            bot.send_message(user_id, alert_msg)
 
     elif text == BTN_LINK_TEXT:
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
