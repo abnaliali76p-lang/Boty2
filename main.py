@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 import telebot
 from urllib.parse import quote
 from pymongo import MongoClient
@@ -42,6 +43,7 @@ bot.remove_webhook()
 client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
+gifts_col = db["gift_codes"] # مجموعة قاعدة البيانات الخاصة بالهدايا
 
 reply_targets = {}
 
@@ -112,6 +114,38 @@ def get_inline_keyboard():
     markup.add(btn_vip, btn_link, btn_stats, btn_proof)
     return markup
 
+# --- معالجة المطالبة برابط الهدية ---
+def claim_gift_code(user_id, first_name, code):
+    gift = gifts_col.find_one({"code": code})
+    if not gift:
+        bot.send_message(user_id, "❌ <b>קישור המתנה אינו תקין או פג תוקפו!</b>", parse_mode="HTML")
+        return
+
+    used_users = gift.get("used_users", [])
+    if user_id in used_users:
+        bot.send_message(user_id, "⚠️ <b>כבר מימשת את המתנה הזו בעבר!</b>", parse_mode="HTML")
+        return
+
+    if len(used_users) >= gift.get("max_users", 0):
+        bot.send_message(user_id, "😔 <b>מצטערים, מספר המשתמשים המרבי למתנה זו כבר הגיע לסיומו!</b>", parse_mode="HTML")
+        return
+
+    points_to_add = gift.get("points", 0)
+    
+    # إضافة النقاط وتسجيل المستخدم
+    users_col.update_one({"user_id": user_id}, {"$inc": {"points": points_to_add}})
+    gifts_col.update_one({"code": code}, {"$push": {"used_users": user_id}})
+
+    user = users_col.find_one({"user_id": user_id})
+    current_points = user.get("points", 0)
+
+    success_msg = (
+        f"🎉 <b>מזל טוב {first_name}!</b>\n\n"
+        f"🎁 קיבלת <b>+{points_to_add} נקודות מתנה!</b>\n"
+        f"💎 סך הכל הנקודות שלך כעת: <b>{current_points}/50</b>"
+    )
+    bot.send_message(user_id, success_msg, parse_mode="HTML", reply_markup=get_inline_keyboard())
+
 # --- معالج أمر START ---
 @bot.message_handler(commands=["start"])
 def start(message):
@@ -120,14 +154,24 @@ def start(message):
     
     command_args = message.text.split()
     referrer_id = None
-    if len(command_args) > 1 and command_args[1].isdigit():
-        referrer_id = int(command_args[1])
+    gift_code = None
+
+    if len(command_args) > 1:
+        arg = command_args[1]
+        if arg.startswith("gift_"):
+            gift_code = arg.replace("gift_", "")
+        elif arg.isdigit():
+            referrer_id = int(arg)
 
     if not is_user_subscribed(user_id):
         send_force_sub_message(user_id, referrer_id)
         return
 
     process_user_registration(user_id, first_name, referrer_id)
+
+    # إذا كان الرابط رابط هدية
+    if gift_code:
+        claim_gift_code(user_id, first_name, gift_code)
 
 # --- تسجيل وتفعيل المستخدم ---
 def process_user_registration(user_id, first_name, referrer_id=None):
@@ -215,12 +259,11 @@ def handle_vip_claim(user_id, points, user):
         parse_mode="HTML"
     )
 
-    # تجهيز الوقت المحلي الدقيق 12 ساعة مع AM/PM (مثال: 5:22 PM)
+    # تجهيز الوقت المحلي الدقيق 12 ساعة مع AM/PM
     now_local = get_local_now()
     raw_time = now_local.strftime("%I:%M %p")
     time_str = raw_time.lstrip('0')
 
-    # النموذج الثالث بالتنسيق المعتمد
     proof_text = (
         f"<blockquote><b>ברכות! משימה הושלמה ✅</b></blockquote>\n\n"
         f"<u><b>צבירת 50/50 נקודות 🎉</b></u>\n"
@@ -310,6 +353,36 @@ def handle_callbacks(call):
 
 # --- أوامر الأدمن الإدارية ---
 
+# أمر إنشاء رابط هدية: /gift <النقاط> <عدد_الأشخاص>
+@bot.message_handler(commands=["gift"])
+def create_gift_link(message):
+    if message.chat.id == ADMIN_ID:
+        args = message.text.split()
+        if len(args) == 3 and args[1].isdigit() and args[2].isdigit():
+            points = int(args[1])
+            max_users = int(args[2])
+            
+            code = str(uuid.uuid4())[:8] # إنشاء كود فريد
+            gifts_col.insert_one({
+                "code": code,
+                "points": points,
+                "max_users": max_users,
+                "used_users": [],
+                "created_at": get_local_now()
+            })
+            
+            gift_url = f"https://t.me/{BOT_USERNAME}?start=gift_{code}"
+            
+            reply_msg = (
+                f"🎁 **تم إنشاء رابط الهدية بنجاح!**\n\n"
+                f"💎 عدد النقاط: `{points}`\n"
+                f"👥 الحد الأقصى للمستخدمين: `{max_users}`\n\n"
+                f"🔗 **رابط الهدية:**\n`{gift_url}`"
+            )
+            bot.reply_to(message, reply_msg, parse_mode="Markdown")
+        else:
+            bot.reply_to(message, "⚠️ **طريقة الاستخدام الخاطئة!**\n\nأرسل الأمر بالشكل التالي:\n`/gift <النقاط> <عدد_الأشخاص>`\n\n**مثال:**\n`/gift 10 5` (10 نقاط لأول 5 أشخاص)", parse_mode="Markdown")
+
 @bot.message_handler(commands=["stats"])
 def stats(message):
     if message.chat.id == ADMIN_ID:
@@ -335,7 +408,8 @@ def reset_all_db(message):
     if message.chat.id == ADMIN_ID:
         try:
             users_col.delete_many({})
-            bot.send_message(ADMIN_ID, "🚨 **تم مسح جميع المشتركين وإعادة تعيين قاعدة البيانات بالكامل!**", parse_mode="Markdown")
+            gifts_col.delete_many({})
+            bot.send_message(ADMIN_ID, "🚨 **تم مسح جميع المشتركين والهدايا وإعادة تعيين قاعدة البيانات بالكامل!**", parse_mode="Markdown")
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ حدث خطأ أثناء المسح: `{e}`", parse_mode="Markdown")
 
