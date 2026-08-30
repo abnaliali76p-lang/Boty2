@@ -186,7 +186,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             reply_markup=get_inline_keyboard()
         )
 
-# --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات + خصم ה-50 نقطة ---
+# --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات النموذج الثالث + خصم الـ 50 نقطة ---
 def handle_vip_claim(user_id, points, user):
     if points < 50:
         alert_text = (
@@ -196,7 +196,7 @@ def handle_vip_claim(user_id, points, user):
         )
         return False, alert_text
 
-    # خصم 50 نقطة من رصيد المستخدم لإجباره على تجميع 50 نقطة أخرى
+    # خصم 50 نقطة من رصيد المستخدم
     new_points = points - 50
     users_col.update_one({"user_id": user_id}, {"$set": {"points": new_points, "claimed_vip": True}})
 
@@ -208,20 +208,18 @@ def handle_vip_claim(user_id, points, user):
         parse_mode="HTML"
     )
 
-    # تجهيز الوقت بتنسيق الساعة والدقائق فقط (HH:MM)
-    time_str = datetime.now().strftime("%H:%M")
+    # تجهيز الوقت بتنسيق 12 ساعة مع رمز AM/PM بدون صفر جهة اليسار (مثل 5:10 PM)
+    raw_time = datetime.now().strftime("%I:%M %p")
+    time_str = raw_time.lstrip('0')
 
-    # تنسيق رسالة الإثبات المطابق للصورة تماماً
+    # النموذج الثالث منسق تماماً بحسب المطلوب
     proof_text = (
-        f"<blockquote>"
-        f"<b>ברכות! משתמש קיבל גישה מיידית! 🎉</b>"
-        f"</blockquote>\n"
-        f"<b>🆔 מזהה משתמש: {user_id}</b>\n"
-        f"<b>🌍 מדינה: ישראל 🇮🇱</b>\n"
-        f"<b>📅 תאריך ושעה: {time_str}</b>\n\n"
-        f"<blockquote>"
-        f"<b>💎 נקודות שנצברו: 50 נקודות ✅</b>"
-        f"</blockquote>"
+        f"<blockquote><b>ברכות! משימה הושלמה ✅</b></blockquote>\n\n"
+        f"<u><b>צבירת 50/50 נקודות 🎉</b></u>\n"
+        f"<u><b>🆔 משתמש: {user_id} 🎯</b></u>\n"
+        f"<u><b>🌍 מדינה: ישראל 🇮🇱</b></u>\n"
+        f"<u><b>⏰ בשעה: {time_str} 🩶</b></u>\n\n"
+        f"<blockquote><b>הגישה לערוץ ה-VIP הופעלה בהצלחה ⚠️</b></blockquote>"
     )
 
     proof_markup = telebot.types.InlineKeyboardMarkup()
