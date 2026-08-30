@@ -5,6 +5,7 @@ from pymongo import MongoClient
 from flask import Flask
 from threading import Thread
 from datetime import datetime
+import pytz
 
 # --- الإعدادات الأساسية ---
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -42,6 +43,11 @@ db = client["bot_database_new"]
 users_col = db["users"]
 
 reply_targets = {}
+
+# --- دالة للحصول على الوقت الحالي بالتوقيت المحلي الصحيح (UTC+3) ---
+def get_local_now():
+    local_tz = pytz.timezone("Asia/Riyadh")
+    return datetime.now(local_tz)
 
 # --- دالة التحقق من اشتراك المستخدم في القناة ---
 def is_user_subscribed(user_id):
@@ -94,7 +100,7 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة (Inline Keyboard) ---
+# --- قائمة الأزرار השפافة (Inline Keyboard) ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה לערוץ ה-VIP", callback_data="check_vip")
@@ -158,7 +164,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "name": first_name,
             "points": initial_points,
             "referrals": 0,
-            "joined_at": datetime.now(),
+            "joined_at": get_local_now(),
             "claimed_vip": False,
             "referrer_name": referrer_name
         })
@@ -186,7 +192,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             reply_markup=get_inline_keyboard()
         )
 
-# --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات النموذج الثالث + خصم الـ 50 نقطة ---
+# --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات بالتوقيت الصحيح ---
 def handle_vip_claim(user_id, points, user):
     if points < 50:
         alert_text = (
@@ -208,11 +214,12 @@ def handle_vip_claim(user_id, points, user):
         parse_mode="HTML"
     )
 
-    # تجهيز الوقت بتنسيق 12 ساعة مع رمز AM/PM بدون صفر جهة اليسار (مثل 5:10 PM)
-    raw_time = datetime.now().strftime("%I:%M %p")
+    # تجهيز الوقت المحلي الدقيق 12 ساعة مع AM/PM (مثال: 5:22 PM)
+    now_local = get_local_now()
+    raw_time = now_local.strftime("%I:%M %p")
     time_str = raw_time.lstrip('0')
 
-    # النموذج الثالث منسق تماماً بحسب المطلوب
+    # النموذج الثالث بالتنسيق المعتمد
     proof_text = (
         f"<blockquote><b>ברכות! משימה הושלמה ✅</b></blockquote>\n\n"
         f"<u><b>צבירת 50/50 נקודות 🎉</b></u>\n"
