@@ -18,10 +18,10 @@ PORT = int(os.environ.get("PORT", 5001))
 
 # --- إعدادات القنوات والروابط المطلوبة ---
 FORCE_SUB_CHANNEL_LINK = "https://t.me/+Fjt6_udvGoY3ZGRk"
-PROOF_CHANNEL_URL = "https://t.me/FPHTE"
-PROOF_CHANNEL_ID = "@FPHTE"
+PROOF_CHANNEL_URL = "https://t.me/FGAEL"
+PROOF_CHANNEL_ID = "@FGAEL"
 VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
-BOOST_URL = "https://t.me/boost/FPHTE"
+BOOST_URL = "https://t.me/boost/FGAEL"
 
 # عناوين أزرار القائمة (Reply Keyboard)
 BTN_VIP_TEXT = "🔞 כניסה לערוץ ה-VIP"
