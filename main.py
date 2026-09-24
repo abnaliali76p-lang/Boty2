@@ -11,9 +11,9 @@ import pytz
 
 # --- الإعدادات الأساسية ---
 TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = 8873553496 
-BOT_USERNAME = "ASDAKBOT" 
-MONGO_URI = os.environ.get("MONGO_URI") 
+ADMIN_ID = 8873553496
+BOT_USERNAME = "ASDAKBOT"
+MONGO_URI = os.environ.get("MONGO_URI")
 PORT = int(os.environ.get("PORT", 5001))
 
 # --- إعدادات القنوات والروابط المطلوبة ---
@@ -32,10 +32,10 @@ BTN_PROOF_TEXT = "✅ ערוץ הוכחות ואמינות"
 app = Flask(__name__)
 
 @app.route("/")
-def home(): 
+def home():
     return "Bot is running!"
 
-def run_web(): 
+def run_web():
     app.run(host="0.0.0.0", port=PORT)
 
 bot = telebot.TeleBot(TOKEN)
@@ -67,16 +67,14 @@ def is_user_subscribed(user_id):
 def send_force_sub_message(chat_id, referrer_id=None):
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     btn_sub = telebot.types.InlineKeyboardButton("📢 לחץ כאן להצטרפות לערוץ", url=FORCE_SUB_CHANNEL_LINK)
-    
     cb_data = f"check_sub_{referrer_id}" if referrer_id else "check_sub_none"
     btn_check = telebot.types.InlineKeyboardButton("✅ אימות הצטרפות", callback_data=cb_data)
-    
     markup.add(btn_sub, btn_check)
-
+    
     msg_text = (
         "⚠️ <b>על מנת להשתמש בבוט, עליך להצטרף לערוץ ההוכחות שלנו תחילה!</b>\n\n"
         "1️⃣ לחץ על הכפתור למטה והצטרף לערוץ.\n"
-        "2️⃣ לאחר ההצטרפות, לחץ על <b>'אימות הצטרפות'</b> כדי להתחיל."
+        "2️⃣ לאחר ההצטרפות, לחץ על <b> אימות הצטרפות </b> כדי להתחיל."
     )
     bot.send_message(chat_id, msg_text, parse_mode="HTML", reply_markup=markup)
 
@@ -104,26 +102,18 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة التفاعلية (بأحجام أنيقة ومختصرة) ---
+# --- قائمة الأزرار الشفافة التفاعلية (באחציות أنيقة ומختصرة) ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
-    
-    # السطر الأول: زر كامل العرض
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה ל-VIP", callback_data="check_vip")
     markup.row(btn_vip)
-    
-    # السطر الثاني: زرين بجانب بعضهما
     btn_link = telebot.types.InlineKeyboardButton("🔗 הקישור שלי", callback_data="get_link")
     btn_stats = telebot.types.InlineKeyboardButton("📊 הנקודות שלי", callback_data="get_stats")
     markup.row(btn_link, btn_stats)
-    
-    # السطر الثالث: زرين بجانب بعضهما
     btn_proof = telebot.types.InlineKeyboardButton("✅ הוכחות", url=PROOF_CHANNEL_URL)
     btn_gift = telebot.types.InlineKeyboardButton("🎁 קבלת מתנה", callback_data="get_boost_gift")
     markup.row(btn_proof, btn_gift)
-    
     return markup
-
 
 # --- معالجة المطالبة برابط الهدية ---
 def claim_gift_code(user_id, first_name, code):
@@ -131,25 +121,23 @@ def claim_gift_code(user_id, first_name, code):
     if not gift:
         bot.send_message(user_id, "❌ <b>קישור המתנה אינו תקין או פג תוקפו!</b>", parse_mode="HTML")
         return
-
+    
     used_users = gift.get("used_users", [])
     if user_id in used_users:
         bot.send_message(user_id, "⚠️ <b>כבר מימשת את המתנה הזו בעבר!</b>", parse_mode="HTML")
         return
-
+        
     if len(used_users) >= gift.get("max_users", 0):
         bot.send_message(user_id, "😔 <b>מצטערים, מספר המשתמשים המרבי למתנה זו כבר הגיע לסיומו!</b>", parse_mode="HTML")
         return
-
+        
     points_to_add = gift.get("points", 0)
-    
-    # إضافة النقاط وتسجيل المستخدم
     users_col.update_one({"user_id": user_id}, {"$inc": {"points": points_to_add}})
     gifts_col.update_one({"code": code}, {"$push": {"used_users": user_id}})
-
+    
     user = users_col.find_one({"user_id": user_id})
     current_points = user.get("points", 0)
-
+    
     success_msg = (
         f"🎉 <b>מזל טוב {first_name}!</b>\n\n"
         f"🎁 קיבלת <b>+{points_to_add} נקודות מתנה!</b>\n"
@@ -162,36 +150,33 @@ def claim_gift_code(user_id, first_name, code):
 def start(message):
     user_id = message.chat.id
     first_name = message.from_user.first_name
-    
     command_args = message.text.split()
+    
     referrer_id = None
     gift_code = None
-
+    
     if len(command_args) > 1:
         arg = command_args[1]
         if arg.startswith("gift_"):
             gift_code = arg.replace("gift_", "")
         elif arg.isdigit():
             referrer_id = int(arg)
-
+            
     if not is_user_subscribed(user_id):
         send_force_sub_message(user_id, referrer_id)
         return
 
     process_user_registration(user_id, first_name, referrer_id)
-
-    # إذا كان الرابط رابط هدية
+    
     if gift_code:
         claim_gift_code(user_id, first_name, gift_code)
 
 # --- تسجيل وتفعيل المستخدم ---
 def process_user_registration(user_id, first_name, referrer_id=None):
     user = users_col.find_one({"user_id": user_id})
-
     if not user:
         initial_points = 5
         referrer_name = None
-
         if referrer_id and referrer_id != user_id:
             referrer = users_col.find_one({"user_id": referrer_id})
             if referrer:
@@ -202,7 +187,6 @@ def process_user_registration(user_id, first_name, referrer_id=None):
                     {"user_id": referrer_id},
                     {"$set": {"points": new_points, "referrals": new_referrals}}
                 )
-                
                 try:
                     bot.send_message(
                         referrer_id,
@@ -224,21 +208,20 @@ def process_user_registration(user_id, first_name, referrer_id=None):
             "claimed_vip": False,
             "referrer_name": referrer_name
         })
-
+        
         bot.send_message(
             user_id,
             get_first_welcome_text(first_name, referrer_name),
             parse_mode="HTML",
             reply_markup=get_inline_keyboard()
         )
-
+        
         try:
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}"))
             bot.send_message(ADMIN_ID, f"👤 **مشترك جديد:** {first_name}\nID: `{user_id}`", reply_markup=markup, parse_mode="Markdown")
         except:
             pass
-
     else:
         points = user.get("points", 0)
         bot.send_message(
@@ -249,7 +232,7 @@ def process_user_registration(user_id, first_name, referrer_id=None):
         )
 
 # --- دالة معالجة الفوز وخروج رابط الـ VIP + إرسال الإثبات بالتوقيت الصحيح ---
-def handle_vip_claim(user_id, points, user):
+def handle_vip_claim(user_id, points, user, first_name):
     if points < 50:
         alert_text = (
             f"❌ סליחה! יש לך {points} נקודות בלבד.\n\n"
@@ -274,19 +257,20 @@ def handle_vip_claim(user_id, points, user):
     now_local = get_local_now()
     raw_time = now_local.strftime("%I:%M %p")
     time_str = raw_time.lstrip('0')
-
+    
     proof_text = (
-        f"<blockquote><b>ברכות! משימה הושלמה ✅</b></blockquote>\n\n"
+        f"<blockquote><b>ברכות! משימה הושלמה ✅</b></blockquote>\n"
         f"<u><b>צבירת 50/50 נקודות 🎉</b></u>\n"
+        f"<u><b>👤 שם: {first_name} 🎯</b></u>\n"
         f"<u><b>🆔 משתמש: {user_id} 🎯</b></u>\n"
         f"<u><b>🌍 מדינה: ישראל 🇮🇱</b></u>\n"
-        f"<u><b>⏰ בשעה: {time_str} 🩶</b></u>\n\n"
-        f"<blockquote><b>הגישה לערוץ ה-VIP הופעלה בהצלחה ⚠️</b></blockquote>"
+        f"<u><b>⏰ בשעה: {time_str} 🩶</b></u>\n"
+        f"<blockquote><b>גישה לערוץ ה-VIP הופעלה ⚠️</b></blockquote>"
     )
 
     proof_markup = telebot.types.InlineKeyboardMarkup()
     proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
-
+    
     try:
         bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
     except Exception as e:
@@ -299,7 +283,7 @@ def handle_vip_claim(user_id, points, user):
 def handle_callbacks(call):
     user_id = call.from_user.id
     first_name = call.from_user.first_name
-
+    
     if call.data.startswith("check_sub_"):
         if is_user_subscribed(user_id):
             bot.answer_callback_query(call.id, "✅ הצטרפותך אושרה בהצלחה!")
@@ -318,30 +302,28 @@ def handle_callbacks(call):
     points = user.get("points", 0) if user else 0
 
     if call.data == "check_vip":
-        success, alert_msg = handle_vip_claim(user_id, points, user)
+        success, alert_msg = handle_vip_claim(user_id, points, user, first_name)
         if not success:
             bot.answer_callback_query(call.id, alert_msg, show_alert=True)
         else:
             bot.answer_callback_query(call.id)
-
+            
     elif call.data == "get_link":
         bot.answer_callback_query(call.id)
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
-        
         share_msg = (
             f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
             f"<code>{ref_link}</code>\n\n"
             f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
             f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
         )
-        
         share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
         encoded_text = quote(share_text)
         share_url = f"https://t.me/share/url?url={ref_link}&text={encoded_text}"
         
         link_markup = telebot.types.InlineKeyboardMarkup()
         link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
-
+        
         bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
 
     elif call.data == "get_stats":
@@ -358,17 +340,14 @@ def handle_callbacks(call):
 
     elif call.data == "get_boost_gift":
         bot.answer_callback_query(call.id)
-        
         boost_text = (
             "🚀 <b>חזק את הערוץ וקבל 5 נקודות באופן מיידי!</b>\n\n"
             f"🔗 <b>קישור לחיזוק:</b>\n{BOOST_URL}\n\n"
             "🎁 הניקוד שלך יתווסף לאחר הבוסט."
         )
-        
         boost_markup = telebot.types.InlineKeyboardMarkup()
         btn_boost = telebot.types.InlineKeyboardButton("⚡ לחץ כאן לחיזוק הערוץ (Boost)", url=BOOST_URL)
         boost_markup.add(btn_boost)
-
         bot.send_message(user_id, boost_text, parse_mode="HTML", reply_markup=boost_markup, disable_web_page_preview=True)
 
     elif call.data.startswith("reply_"):
@@ -378,7 +357,6 @@ def handle_callbacks(call):
         bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_user}`:", parse_mode="Markdown")
 
 # --- أوامر الأدمن الإدارية ---
-
 @bot.message_handler(commands=["gift"])
 def create_gift_link(message):
     if message.chat.id == ADMIN_ID:
@@ -386,7 +364,6 @@ def create_gift_link(message):
         if len(args) == 3 and args[1].isdigit() and args[2].isdigit():
             points = int(args[1])
             max_users = int(args[2])
-            
             code = str(uuid.uuid4())[:8]
             gifts_col.insert_one({
                 "code": code,
@@ -395,9 +372,7 @@ def create_gift_link(message):
                 "used_users": [],
                 "created_at": get_local_now()
             })
-            
             gift_url = f"https://t.me/{BOT_USERNAME}?start=gift_{code}"
-            
             reply_msg = (
                 f"🎁 **تم إنشاء رابط الهدية بنجاح!**\n\n"
                 f"💎 عدد النقاط: `{points}`\n"
@@ -447,13 +422,12 @@ def broadcast(message):
     target_message_id = message.reply_to_message.message_id
     
     bot.send_message(ADMIN_ID, "⏳ جاري بدء الإذاعة...")
-
     for u in users:
         target_id = u.get("user_id")
         try:
             bot.copy_message(chat_id=target_id, from_chat_id=ADMIN_ID, message_id=target_message_id)
             count += 1
-            time.sleep(0.05) 
+            time.sleep(0.05)
         except Exception as e:
             error_msg = str(e).lower()
             if "blocked" in error_msg or "deactivated" in error_msg or "chat not found" in error_msg:
@@ -464,7 +438,7 @@ def broadcast(message):
             continue
             
     bot.send_message(
-        ADMIN_ID, 
+        ADMIN_ID,
         f"📊 **تقرير الإذاعة:**\n\n"
         f"✅ تم الإرسال بنجاح: `{count}`\n"
         f"🗑️ تم حذف المحظورين/الوهميين: `{deleted_count}`\n"
@@ -478,34 +452,32 @@ def handle_text_messages(message):
     user_id = message.chat.id
     first_name = message.from_user.first_name
     text = message.text
-
+    
     user = users_col.find_one({"user_id": user_id})
     points = user.get("points", 0) if user else 0
-
+    
     if text == BTN_VIP_TEXT:
-        success, alert_msg = handle_vip_claim(user_id, points, user)
+        success, alert_msg = handle_vip_claim(user_id, points, user, first_name)
         if not success:
             bot.send_message(user_id, alert_msg)
-
+            
     elif text == BTN_LINK_TEXT:
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
-        
         share_msg = (
             f"🚀 <b>הקישור האישי שלך להזמנת חברים:</b>\n\n"
             f"<code>{ref_link}</code>\n\n"
             f"📲 שתף את הקישור בקבוצות או עם חברים.\n"
             f"🎁 על כל הצטרפות תקבל <b>5 נקודות</b>!"
         )
-        
         share_text = "בואו לבוט הכי לוהט בישראל 🔥🔞 קבלו נקודות וגישה לערוץ ה-VIP!"
         encoded_text = quote(share_text)
         share_url = f"https://t.me/share/url?url={ref_link}&text={encoded_text}"
         
         link_markup = telebot.types.InlineKeyboardMarkup()
         link_markup.add(telebot.types.InlineKeyboardButton("📤 שתף את הקישור שלי", url=share_url))
-
+        
         bot.send_message(user_id, share_msg, parse_mode="HTML", reply_markup=link_markup)
-
+        
     elif text == BTN_STATS_TEXT:
         referrals = user.get("referrals", 0) if user else 0
         stats_msg = (
@@ -516,14 +488,14 @@ def handle_text_messages(message):
             f"🎯 נותרו לך עוד <b>{max(0, 50 - points)}</b> נקודות לפתיחת ערוץ ה-VIP!"
         )
         bot.send_message(user_id, stats_msg, parse_mode="HTML")
-
+        
     elif text == BTN_PROOF_TEXT:
         bot.send_message(user_id, f"✅ ערוץ הוכחות ואמינות:\n{PROOF_CHANNEL_URL}")
-
+        
     else:
-        try: 
+        try:
             bot.forward_message(ADMIN_ID, user_id, message.message_id)
-        except: 
+        except:
             pass
 
 if __name__ == "__main__":
