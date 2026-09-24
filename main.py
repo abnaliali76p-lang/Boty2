@@ -20,7 +20,7 @@ PORT = int(os.environ.get("PORT", 5001))
 FORCE_SUB_CHANNEL_LINK = "https://t.me/+Fjt6_udvGoY3ZGRk"
 PROOF_CHANNEL_URL = "https://t.me/FGAEL"
 PROOF_CHANNEL_ID = "@FGAEL"
-VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOYzYzI0"
+VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
 BUY_VIP_LINK = "https://t.me/FGAEL/58"
 
 # عناوين أزرار القائمة (Reply Keyboard)
