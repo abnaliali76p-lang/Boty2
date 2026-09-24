@@ -21,7 +21,7 @@ FORCE_SUB_CHANNEL_LINK = "https://t.me/+Fjt6_udvGoY3ZGRk"
 PROOF_CHANNEL_URL = "https://t.me/FGAEL"
 PROOF_CHANNEL_ID = "@FGAEL"
 VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
-BOOST_URL = "https://t.me/boost/FGAEL"
+BUY_VIP_LINK = "https://t.me/FGAEL/58"
 
 # عناوين أزرار القائمة (Reply Keyboard)
 BTN_VIP_TEXT = "🔞 כניסה לערוץ ה-VIP"
@@ -102,7 +102,7 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة التفاعلية (באחציות أنيقة ומختصرة) ---
+# --- قائمة الأزرار الشفافة التفاعلية ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה ל-VIP", callback_data="check_vip")
@@ -111,8 +111,8 @@ def get_inline_keyboard():
     btn_stats = telebot.types.InlineKeyboardButton("📊 הנקודות שלי", callback_data="get_stats")
     markup.row(btn_link, btn_stats)
     btn_proof = telebot.types.InlineKeyboardButton("✅ הוכחות", url=PROOF_CHANNEL_URL)
-    btn_gift = telebot.types.InlineKeyboardButton("🎁 קבלת מתנה", callback_data="get_boost_gift")
-    markup.row(btn_proof, btn_gift)
+    btn_buy_vip = telebot.types.InlineKeyboardButton("💳 רכישת מנוי VIP", callback_data="buy_vip_info")
+    markup.row(btn_proof, btn_buy_vip)
     return markup
 
 # --- معالجة المطالبة برابط الهدية ---
@@ -338,17 +338,15 @@ def handle_callbacks(call):
         )
         bot.send_message(user_id, stats_msg, parse_mode="HTML")
 
-    elif call.data == "get_boost_gift":
+    elif call.data == "buy_vip_info":
         bot.answer_callback_query(call.id)
-        boost_text = (
-            "🚀 <b>חזק את הערוץ וקבל 5 נקודות באופן מיידי!</b>\n\n"
-            f"🔗 <b>קישור לחיזוק:</b>\n{BOOST_URL}\n\n"
-            "🎁 הניקוד שלך יתווסף לאחר הבוסט."
+        buy_msg = (
+            "<blockquote><b>מחיר כניסה: 2500 כוכבי טלגרם ⭐️</b></blockquote>\n"
+            "<blockquote><b>התוכן כולל: 4,000 סרטונים + 2 קבוצות במתנה (ישראלית וערבית) 🇮🇱</b></blockquote>\n"
+            "<blockquote><b>שלח הודעה כאן לתשלום ולקבלת הקישורים:⬇️💋</b></blockquote>\n"
+            f"⭐ {BUY_VIP_LINK}"
         )
-        boost_markup = telebot.types.InlineKeyboardMarkup()
-        btn_boost = telebot.types.InlineKeyboardButton("⚡ לחץ כאן לחיזוק הערוץ (Boost)", url=BOOST_URL)
-        boost_markup.add(btn_boost)
-        bot.send_message(user_id, boost_text, parse_mode="HTML", reply_markup=boost_markup, disable_web_page_preview=True)
+        bot.send_message(user_id, buy_msg, parse_mode="HTML", disable_web_page_preview=True)
 
     elif call.data.startswith("reply_"):
         target_user = call.data.split("_")[1]
