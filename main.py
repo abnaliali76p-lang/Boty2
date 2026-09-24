@@ -20,7 +20,7 @@ PORT = int(os.environ.get("PORT", 5001))
 FORCE_SUB_CHANNEL_LINK = "https://t.me/+Fjt6_udvGoY3ZGRk"
 PROOF_CHANNEL_URL = "https://t.me/FGAEL"
 PROOF_CHANNEL_ID = "@FGAEL"
-VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOUyYzI0"
+VIP_CHANNEL_URL = "https://t.me/+Kd-iHtw-IOYzYzI0"
 BUY_VIP_LINK = "https://t.me/FGAEL/58"
 
 # عناوين أزرار القائمة (Reply Keyboard)
@@ -102,7 +102,7 @@ def get_returning_welcome_text(first_name, points):
         f"</blockquote>"
     )
 
-# --- قائمة الأزرار الشفافة التفاعلية ---
+# --- قائمة الأزرار השפפאה التفاعلية ---
 def get_inline_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
     btn_vip = telebot.types.InlineKeyboardButton("🔞 כניסה ל-VIP", callback_data="check_vip")
@@ -269,7 +269,8 @@ def handle_vip_claim(user_id, points, user, first_name):
     )
 
     proof_markup = telebot.types.InlineKeyboardMarkup()
-    proof_markup.add(telebot.types.InlineKeyboardButton("🤖 לחץ כאן לכניסה לבוט", url=f"https://t.me/{BOT_USERNAME}?start={user_id}"))
+    # تم تعديل الرابط هنا ليوجه إلى البوت المباشر بدون الـ start ID الخاص بالمستخدم
+    proof_markup.add(telebot.types.InlineKeyboardButton("לחץ כאן לכניסה לבוט 🤖", url=f"https://t.me/{BOT_USERNAME}"))
     
     try:
         bot.send_message(PROOF_CHANNEL_ID, proof_text, parse_mode="HTML", reply_markup=proof_markup)
