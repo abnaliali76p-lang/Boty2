@@ -35,7 +35,7 @@ VIDEO_URL = "https://files.catbox.moe/k79dhg.mp4"
 VIP_IMAGE_URL = ""
 
 # رابط ونص المشاركة للزر الأول
-SHARE_TEXT = "תוכן מלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/TXQo2Y8LrkM4NjIx"
+SHARE_TEXT = "תוכן מלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/HPUTZEI9UTRhMWUx"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 def get_welcome_text(first_name):
@@ -150,7 +150,7 @@ def handle_callbacks(call):
                 "<blockquote><b>מחיר כניסה: 1000 כוכבי טלגרם ⭐️</b></blockquote>\n"
                 "<blockquote><b>התוכן כולל: 4,000 סרטונים + 2 קבוצות במתנה (ישראלית וערבית) 🇮🇱</b></blockquote>\n"
                 "<blockquote><b>שלח הודעה כאן לתשלום ולקבלת הקישורים:⬇️💋</b></blockquote>\n"
-                "<b>⭐️https://t.me/m/Q76_p4BZYzlk</b>"
+                "<b>⭐️https://t.me/m/7_KEyMT7OTg8</b>"
             )
             bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
 
