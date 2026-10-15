@@ -147,7 +147,7 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id)
             
             vip_text = (
-                "<blockquote><b>מחיר כניסה: 1000 כוכבי טלגרם ⭐️</b></blockquote>\n"
+                "<blockquote><b>מחיר כניסה: 2500 כוכבי טלגרם ⭐️</b></blockquote>\n"
                 "<blockquote><b>התוכן כולל: 4,000 סרטונים + 2 קבוצות במתנה (ישראלית וערבית) 🇮🇱</b></blockquote>\n"
                 "<blockquote><b>שלח הודעה כאן לתשלום ולקבלת הקישורים:⬇️💋</b></blockquote>\n"
                 "<b>⭐️https://t.me/m/7_KEyMT7OTg8</b>"
