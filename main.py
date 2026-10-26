@@ -2,12 +2,11 @@ import os
 import time
 import telebot
 from pymongo import MongoClient
-import urllib.parse
 from flask import Flask
 from threading import Thread
 from datetime import datetime, timedelta
 
-# --- الإعدادات (الخاصة بالبوت الثاني) ---
+# --- الإعدادات الأساسية ---
 TOKEN = os.environ.get("BOT_TOKEN") 
 ADMIN_ID = 8873553496 
 BOT_USERNAME = "ASDAKBOT" 
@@ -31,18 +30,14 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-VIDEO_URL = "https://files.catbox.moe/9nps91.mp4"
-VIP_IMAGE_URL = ""
-
-# رابط ونص المشاركة للزر الأول
-SHARE_TEXT = "תוכן מלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/HPUTZEI9UTRhMWUx"
-SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
-
+# --- نص رسالة الترحيب الطويلة (بالعبرية) مع التنسيق الجذاب ---
 def get_welcome_text(first_name):
     return (
-        f"<b>היי {first_name}! רוצים טעם מהסוד? 🤤\n\n"
-        f"פתיחת הכספת המתוקה (0/2 שיתופים) 🍓 67k+ סרטונים בלעדיים</b>\n\n"
-        f"<blockquote>לחצו על \"שתף\" כדי לקבל את הפינוק שלכם ממש עכשיו 🔞</blockquote>"
+        f"<b>שלום {first_name}! 👋</b>\n\n"
+        f"<b>ברוכים הבאים לבוט הפופולרי והשימושי ביותר בישראל! 🔥</b>\n\n"
+        f"<b>כאן תמצאו את כל הסרטונים הבלעדיים, הייחודיים והלוהטים ביותר ברשת שכולם מדברים עליהם. "
+        f"הצטרפו עכשיו וחוו את התוכן האיכותי והמרתק ביותר ללא הגבלה! 🇮🇱✨</b>\n\n"
+        f"<blockquote><b>הישארו מעודכנים ותיהנו מהחוויה האקסקלוסיבית ביותר. 💋🔞</b></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -61,20 +56,22 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار التفاعلية (تمت إضافة زر فتح الموقع كـ Web App)
+    # تجهيز الأزرار (زر فتح البوت وزر الرد للإدارة إن وجد)
     markup = telebot.types.InlineKeyboardMarkup()
     
-    # زر الـ Web App الجديد الذي يفتح موقعك داخل تليجرام
+    # زر فتح البوت/الموقع (Web App)
     web_app_info = telebot.types.WebAppInfo(url="https://israelhotvideo.com")
-    markup.add(telebot.types.InlineKeyboardButton("🌐 פתח את האתר (Web App)", web_app=web_app_info))
-    
-    markup.add(telebot.types.InlineKeyboardButton("🔐 שיתוף 0/2", url=SHARE_URL))
-    markup.add(telebot.types.InlineKeyboardButton("📥 אימות שיתוף", callback_data="check_share"))
-    markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", callback_data="buy_vip"))
+    markup.add(telebot.types.InlineKeyboardButton("🌐 פתח את הבוט", web_app=web_app_info))
 
+    # إرسال رسالة الترحيب مع الزر
     try:
-        bot.send_video(user_id, VIDEO_URL, caption=get_welcome_text(first_name), 
-                       parse_mode="HTML", protect_content=True, reply_markup=markup)
+        bot.send_message(
+            user_id, 
+            get_welcome_text(first_name), 
+            parse_mode="HTML", 
+            protect_content=True,
+            reply_markup=markup
+        )
     except Exception as e: 
         print(f"Error: {e}")
 
@@ -132,34 +129,12 @@ def broadcast(message):
         protect_content=True
     )
 
-# --- معالجة الأزرار التفاعلية ---
+# --- معالجة الأزرار العكسية وتصفير البيانات ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
-    now = datetime.now()
 
-    if call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ סליחה יקירי, עליך לשתף קודם! 📲", show_alert=True)
-
-    elif call.data == "buy_vip":
-        user = users_col.find_one({"user_id": user_id})
-        last_vip = user.get("last_vip_click") if user else None
-
-        if last_vip and (now - last_vip < timedelta(hours=24)):
-            bot.answer_callback_query(call.id, "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.", show_alert=True)
-        else:
-            users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_click": now}}, upsert=True)
-            bot.answer_callback_query(call.id)
-            
-            vip_text = (
-                "<blockquote><b>מחיר כניסה: 2500 כוכבי טלגרם ⭐️</b></blockquote>\n"
-                "<blockquote><b>התוכן כולל: 4,000 סרטונים + 2 קבוצות במתנה (ישראלית וערבית) 🇮🇱</b></blockquote>\n"
-                "<blockquote><b>שלח הודעה כאן לתשלום ולקבלת הקישורים:⬇️💋</b></blockquote>\n"
-                "<b>⭐️https://t.me/m/7_KEyMT7OTg8</b>"
-            )
-            bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
-
-    elif call.data.startswith("reply_"):
+    if call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
@@ -171,10 +146,6 @@ def handle_callbacks(call):
 
     elif call.data == "cancel_reset":
         bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
-
-@bot.chat_join_request_handler()
-def join_req(request):
-    send_welcome_message(request.from_user.id, request.from_user.first_name)
 
 # --- معالجة رد الأدمن الشامل على المستخدمين ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.chat.id in reply_targets)
