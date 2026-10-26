@@ -61,8 +61,13 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار الثلاثة التفاعلية
+    # الأزرار التفاعلية (تمت إضافة زر فتح الموقع كـ Web App)
     markup = telebot.types.InlineKeyboardMarkup()
+    
+    # زر الـ Web App الجديد الذي يفتح موقعك داخل تليجرام
+    web_app_info = telebot.types.WebAppInfo(url="https://israelhotvideo.com")
+    markup.add(telebot.types.InlineKeyboardButton("🌐 פתח את האתר (Web App)", web_app=web_app_info))
+    
     markup.add(telebot.types.InlineKeyboardButton("🔐 שיתוף 0/2", url=SHARE_URL))
     markup.add(telebot.types.InlineKeyboardButton("📥 אימות שיתוף", callback_data="check_share"))
     markup.add(telebot.types.InlineKeyboardButton("👑 רכישת מנוי VIP", callback_data="buy_vip"))
