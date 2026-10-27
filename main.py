@@ -30,14 +30,12 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-# --- نص رسالة الترحيب الطويلة (بالعبرية) مع التنسيق الجذاب ---
+# --- نص رسالة الترحيب الجديدة داخل اقتباس ---
 def get_welcome_text(first_name):
     return (
-        f"<b>שלום {first_name}! 👋</b>\n\n"
-        f"<b>ברוכים הבאים לבוט הפופולרי והשימושי ביותר בישראל! 🔥</b>\n\n"
-        f"<b>כאן תמצאו את כל הסרטונים הבלעדיים, הייחודיים והלוהטים ביותר ברשת שכולם מדברים עליהם. "
-        f"הצטרפו עכשיו וחוו את התוכן האיכותי והמרתק ביותר ללא הגבלה! 🇮🇱✨</b>\n\n"
-        f"<blockquote><b>הישארו מעודכנים ותיהנו מהחוויה האקסקלוסיבית ביותר. 💋🔞</b></blockquote>"
+        f"<blockquote><b>👋 Hi, watch all the videos here👇\n"
+        f"https://israelhotvideo.com\n"
+        f"https://israelhotvideo.com</b></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -56,21 +54,13 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # تجهيز الأزرار (زر فتح البوت وزر الرد للإدارة إن وجد)
-    markup = telebot.types.InlineKeyboardMarkup()
-    
-    # زر فتح البوت/الموقع (Web App)
-    web_app_info = telebot.types.WebAppInfo(url="https://israelhotvideo.com")
-    markup.add(telebot.types.InlineKeyboardButton("🌐 פתח את הבוט", web_app=web_app_info))
-
-    # إرسال رسالة الترحيب مع الزر
+    # إرسال رسالة الترحيب بدون أزرار
     try:
         bot.send_message(
             user_id, 
             get_welcome_text(first_name), 
             parse_mode="HTML", 
-            protect_content=True,
-            reply_markup=markup
+            protect_content=True
         )
     except Exception as e: 
         print(f"Error: {e}")
