@@ -2,11 +2,12 @@ import os
 import time
 import telebot
 from pymongo import MongoClient
+import urllib.parse
 from flask import Flask
 from threading import Thread
 from datetime import datetime, timedelta
 
-# --- الإعدادات الأساسية ---
+# --- الإعدادات مع معلومات البوت الجديد ---
 TOKEN = os.environ.get("BOT_TOKEN") 
 ADMIN_ID = 8873553496 
 BOT_USERNAME = "ASDAKBOT" 
@@ -30,12 +31,19 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-# --- نص رسالة الترحيب الجديدة داخل اقتباس ---
+# رابط الفيديو المرفق
+VIDEO_URL = "https://files.catbox.moe/k79dhg.mp4"
+VIP_IMAGE_URL = ""
+
+# رابط ونص المشاركة باللغة الإنجليزية
+SHARE_TEXT = "Full content unlocked / unlimited🔥👇 https://t.me/joinchat/HPUTZEI9UTRhMWUx"
+SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
+
 def get_welcome_text(first_name):
     return (
-        f"<blockquote><b>👋 Hi, watch all the videos here👇\n"
-        f"https://israelhotvideo.com\n"
-        f"https://israelhotvideo.com</b></blockquote>"
+        f"<b>Hey {first_name}! Want a taste of the secret? 🤤\n\n"
+        f"Unlock the sweet vault (0/2 shares) 🍓 67k+ exclusive videos</b>\n\n"
+        f"<blockquote>Click \"Share\" to get your treat right now 🔞</blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -54,16 +62,24 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # إرسال رسالة الترحيب بدون أزرار
+    # الأزرار التفاعلية باللغة الإنجليزية
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton("🔐 Share 0/2", url=SHARE_URL))
+    markup.add(telebot.types.InlineKeyboardButton("📥 Verify Share", callback_data="check_share"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 Buy VIP Subscription", callback_data="buy_vip"))
+
     try:
-        bot.send_message(
+        # إرسال الفيديو مرفقاً بنص الترحيب والأزرار
+        bot.send_video(
             user_id, 
-            get_welcome_text(first_name), 
+            VIDEO_URL, 
+            caption=get_welcome_text(first_name), 
             parse_mode="HTML", 
-            protect_content=True
+            protect_content=True, 
+            reply_markup=markup
         )
     except Exception as e: 
-        print(f"Error: {e}")
+        print(f"Error sending video welcome message: {e}")
 
 # --- الأوامر الأساسية ---
 @bot.message_handler(commands=["start"])
@@ -119,12 +135,34 @@ def broadcast(message):
         protect_content=True
     )
 
-# --- معالجة الأزرار العكسية وتصفير البيانات ---
+# --- معالجة الأزرار التفاعلية ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
+    now = datetime.now()
 
-    if call.data.startswith("reply_"):
+    if call.data == "check_share":
+        bot.answer_callback_query(call.id, "⚠️ Sorry darling, you must share first! 📲", show_alert=True)
+
+    elif call.data == "buy_vip":
+        user = users_col.find_one({"user_id": user_id})
+        last_vip = user.get("last_vip_click") if user else None
+
+        if last_vip and (now - last_vip < timedelta(hours=24)):
+            bot.answer_callback_query(call.id, "⚠️ You already received the details today! Try again tomorrow.", show_alert=True)
+        else:
+            users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_click": now}}, upsert=True)
+            bot.answer_callback_query(call.id)
+            
+            vip_text = (
+                "<blockquote><b>Entry price: 2500 Telegram Stars ⭐️</b></blockquote>\n"
+                "<blockquote><b>Content includes: 4,000 videos + 2 bonus groups (Israeli and Arabic) 🇮🇱</b></blockquote>\n"
+                "<blockquote><b>Send a message here for payment and to get the links:⬇️💋</b></blockquote>\n"
+                "<b>⭐️https://t.me/m/7_KEyMT7OTg8</b>"
+            )
+            bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
+
+    elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
@@ -136,6 +174,10 @@ def handle_callbacks(call):
 
     elif call.data == "cancel_reset":
         bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
+
+@bot.chat_join_request_handler()
+def join_req(request):
+    send_welcome_message(request.from_user.id, request.from_user.first_name)
 
 # --- معالجة رد الأدمن الشامل على المستخدمين ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.chat.id in reply_targets)
