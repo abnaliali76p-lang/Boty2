@@ -158,7 +158,7 @@ def handle_callbacks(call):
                 "<blockquote><b>Entry price: 2500 Telegram Stars ⭐️</b></blockquote>\n"
                 "<blockquote><b>Content includes: 4,000 videos + 2 bonus groups (Israeli and Arabic) 🇮🇱</b></blockquote>\n"
                 "<blockquote><b>Send a message here for payment and to get the links:⬇️💋</b></blockquote>\n"
-                "<b>⭐️https://t.me/m/7_KEyMT7OTg8</b>"
+                "<b>⭐️https://t.me/m/gGbbzgOrZmU8</b>"
             )
             bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
 
