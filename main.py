@@ -36,7 +36,7 @@ VIDEO_URL = "https://files.catbox.moe/k79dhg.mp4"
 VIP_IMAGE_URL = ""
 
 # رابط ونص المشاركة باللغة الإنجليزية
-SHARE_TEXT = "Full content unlocked / unlimited🔥👇 https://t.me/joinchat/HPUTZEI9UTRhMWUx"
+SHARE_TEXT = "Full content unlocked / unlimited🔥👇 https://t.me/joinchat/olGIQ7GjW6xhZTY5"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 def get_welcome_text(first_name):
