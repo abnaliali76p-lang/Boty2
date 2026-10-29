@@ -32,7 +32,7 @@ db = client["bot_database_new"]
 users_col = db["users"]
 
 # رابط الفيديو المرفق
-VIDEO_URL = "https://files.catbox.moe/k79dhg.mp4"
+VIDEO_URL = "https://files.catbox.moe/15e5t5.mp4"
 VIP_IMAGE_URL = ""
 
 # رابط ونص المشاركة باللغة الإنجليزية
