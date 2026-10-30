@@ -41,9 +41,11 @@ SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 def get_welcome_text(first_name):
     return (
-        f"<b>Hey {first_name}! Want a taste of the secret? 🤤\n\n"
-        f"Unlock the sweet vault (0/2 shares) 🍓 67k+ exclusive videos</b>\n\n"
-        f"<blockquote>Click \"Share\" to get your treat right now 🔞</blockquote>"
+        f"🔥 <b>Access Granted: VIP Collection Unlocked!</b>\n\n"
+        f"Hey <b>{first_name}</b>, your personal gateway to the vault is ready.\n\n"
+        f"<blockquote>📍 <b>Vault Status:</b> Locked 🔒 (Requires 2 Shares)\n"
+        f"🎬 <b>Available Items:</b> 67,000+ Exclusive Files</blockquote>\n\n"
+        f"<blockquote><i>Click 'Share & Unlock' below to claim your access right now! 🔞</i></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -62,11 +64,14 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار التفاعلية باللغة الإنجليزية
+    # الأزرار التفاعلية بتنسيق النموذج الأول (شبكي احترافي)
     markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("🔐 Share 0/2", url=SHARE_URL))
-    markup.add(telebot.types.InlineKeyboardButton("📥 Verify Share", callback_data="check_share"))
-    markup.add(telebot.types.InlineKeyboardButton("👑 Buy VIP Subscription", callback_data="buy_vip"))
+    btn_share = telebot.types.InlineKeyboardButton("🔓 Share & Unlock (0/2)", url=SHARE_URL)
+    btn_verify = telebot.types.InlineKeyboardButton("🔄 Verify Access", callback_data="check_share")
+    btn_vip = telebot.types.InlineKeyboardButton("💎 VIP Instant Pass", callback_data="buy_vip")
+    
+    markup.row(btn_share)
+    markup.row(btn_verify, btn_vip)
 
     try:
         # إرسال الفيديو مرفقاً بنص الترحيب والأزرار
@@ -142,7 +147,7 @@ def handle_callbacks(call):
     now = datetime.now()
 
     if call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ Sorry darling, you must share first! 📲", show_alert=True)
+        bot.answer_callback_query(call.id, "⚠️ System check: Share incomplete (0/2). Please share to 2 chats first!", show_alert=True)
 
     elif call.data == "buy_vip":
         user = users_col.find_one({"user_id": user_id})
@@ -155,10 +160,13 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id)
             
             vip_text = (
-                "<blockquote><b>Entry price: 2500 Telegram Stars ⭐️</b></blockquote>\n"
-                "<blockquote><b>Content includes: 4,000 videos + 2 bonus groups (Israeli and Arabic) 🇮🇱</b></blockquote>\n"
-                "<blockquote><b>Send a message here for payment and to get the links:⬇️💋</b></blockquote>\n"
-                "<b>⭐️https://t.me/m/gGbbzgOrZmU8</b>"
+                "⚡ <b>VIP UNLIMITED PASS</b> ⚡\n\n"
+                "<blockquote>▫️ <b>4,000+ Exclusive Direct Downloads</b>\n"
+                "▫️ <b>2 Private Channels (Daily Updates)</b>\n"
+                "▫️ <b>Lifetime Unlimited Access</b></blockquote>\n\n"
+                "<blockquote>💰 <b>Price: 2,500 Telegram Stars ⭐️</b></blockquote>\n\n"
+                "👇 <i>Click link below to start payment chat & get your access:</i>\n"
+                "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b>"
             )
             bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
 
