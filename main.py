@@ -164,7 +164,7 @@ def handle_callbacks(call):
                 "<blockquote>▫️ <b>4,000+ Exclusive Direct Downloads</b>\n"
                 "▫️ <b>2 Private Channels (Daily Updates)</b>\n"
                 "▫️ <b>Lifetime Unlimited Access</b></blockquote>\n\n"
-                "<blockquote>💰 <b>Price: 2,500 Telegram Stars ⭐️</b></blockquote>\n\n"
+                "<blockquote>💰 <b>Price: 1000 Telegram Stars ⭐️</b></blockquote>\n\n"
                 "👇 <i>Click link below to start payment chat & get your access:</i>\n"
                 "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b>"
             )
