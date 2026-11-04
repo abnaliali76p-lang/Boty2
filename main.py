@@ -65,7 +65,8 @@ def send_welcome_message(user_id, first_name):
     # الأزرار التفاعلية
     markup = telebot.types.InlineKeyboardMarkup()
     btn_share = telebot.types.InlineKeyboardButton("🔓 Share & Unlock (0/1)", url=SHARE_URL)
-    btn_verify = telebot.types.InlineKeyboardButton("🔄 Verify Access", callback_data="check_share")
+    # تعديل زر التحقق ليصبح رابطاً مباشراً
+    btn_verify = telebot.types.InlineKeyboardButton("🔄 Verify Access", url="https://t.me/joinchat/vaxveStqc3VkMDg0")
     
     markup.row(btn_share)
     markup.row(btn_verify)
@@ -142,10 +143,7 @@ def broadcast(message):
 def handle_callbacks(call):
     user_id = call.from_user.id
 
-    if call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ System check: Share incomplete (0/1). Please share to 1 chat first!", show_alert=True)
-
-    elif call.data.startswith("reply_"):
+    if call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
