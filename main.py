@@ -41,11 +41,9 @@ SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 def get_welcome_text(first_name):
     return (
-        f"🔥 <b>Access Granted: VIP Collection Unlocked!</b>\n\n"
-        f"Hey <b>{first_name}</b>, your personal gateway to the vault is ready.\n\n"
-        f"<blockquote>📍 <b>Vault Status:</b> Locked 🔒 (Requires 2 Shares)\n"
-        f"🎬 <b>Available Items:</b> 67,000+ Exclusive Files</blockquote>\n\n"
-        f"<blockquote><i>Click 'Share & Unlock' below to claim your access right now! 🔞</i></blockquote>"
+        "THE GROUP IS LOCKED 🔐\n\n"
+        "SHARE 1 TIME TO UNLOCK\n"
+        "THE GROUP INSTANTLY 🥵"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -64,14 +62,13 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار التفاعلية بتنسيق النموذج الأول (شبكي احترافي)
+    # الأزرار التفاعلية
     markup = telebot.types.InlineKeyboardMarkup()
-    btn_share = telebot.types.InlineKeyboardButton("🔓 Share & Unlock (0/2)", url=SHARE_URL)
+    btn_share = telebot.types.InlineKeyboardButton("🔓 Share & Unlock (0/1)", url=SHARE_URL)
     btn_verify = telebot.types.InlineKeyboardButton("🔄 Verify Access", callback_data="check_share")
-    btn_vip = telebot.types.InlineKeyboardButton("💎 VIP Instant Pass", callback_data="buy_vip")
     
     markup.row(btn_share)
-    markup.row(btn_verify, btn_vip)
+    markup.row(btn_verify)
 
     try:
         # إرسال الفيديو مرفقاً بنص الترحيب والأزرار
@@ -144,31 +141,9 @@ def broadcast(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
-    now = datetime.now()
 
     if call.data == "check_share":
-        bot.answer_callback_query(call.id, "⚠️ System check: Share incomplete (0/2). Please share to 2 chats first!", show_alert=True)
-
-    elif call.data == "buy_vip":
-        user = users_col.find_one({"user_id": user_id})
-        last_vip = user.get("last_vip_click") if user else None
-
-        if last_vip and (now - last_vip < timedelta(hours=24)):
-            bot.answer_callback_query(call.id, "⚠️ You already received the details today! Try again tomorrow.", show_alert=True)
-        else:
-            users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_click": now}}, upsert=True)
-            bot.answer_callback_query(call.id)
-            
-            vip_text = (
-                "⚡ <b>VIP UNLIMITED PASS</b> ⚡\n\n"
-                "<blockquote>▫️ <b>4,000+ Exclusive Direct Downloads</b>\n"
-                "▫️ <b>2 Private Channels (Daily Updates)</b>\n"
-                "▫️ <b>Lifetime Unlimited Access</b></blockquote>\n\n"
-                "<blockquote>💰 <b>Price: 1000 Telegram Stars ⭐️</b></blockquote>\n\n"
-                "👇 <i>Click link below to start payment chat & get your access:</i>\n"
-                "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b>"
-            )
-            bot.send_message(user_id, vip_text, parse_mode="HTML", protect_content=True)
+        bot.answer_callback_query(call.id, "⚠️ System check: Share incomplete (0/1). Please share to 1 chat first!", show_alert=True)
 
     elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
@@ -177,7 +152,7 @@ def handle_callbacks(call):
         bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_id}`:", protect_content=True)
 
     elif call.data == "confirm_reset":
-        users_col.update_many({}, {"$unset": {"last_welcome": "", "last_vip_click": ""}})
+        users_col.update_many({}, {"$unset": {"last_welcome": ""}})
         bot.edit_message_text("✅ تم تصفير جميع التواريخ بنجاح.", call.message.chat.id, call.message.message_id)
 
     elif call.data == "cancel_reset":
