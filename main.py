@@ -7,11 +7,11 @@ from flask import Flask
 from threading import Thread
 from datetime import datetime, timedelta
 
-# --- الإعدادات مع معلومات البوت الجديد ---
-TOKEN = os.environ.get("BOT_TOKEN", "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c") 
+# --- الإعدادات (تُجلب من متغيرات البيئة في Render لأعلى درجات الأمان) ---
+TOKEN = os.environ.get("BOT_TOKEN") 
 ADMIN_ID = 8873553496 
 BOT_USERNAME = "Whedrolvedeosbot" 
-MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://ahmedali:59BNjZnOO6uegR41@cluster0.strdfbq.mongodb.net/") 
+MONGO_URI = os.environ.get("MONGO_URI") 
 PORT = int(os.environ.get("PORT", 5001))
 
 reply_targets = {}
