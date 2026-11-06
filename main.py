@@ -31,17 +31,17 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-# فحص الاتصال بقاعدة البيانات (تم تصحيح إضافة علامات التنصيص حول كلمة ping)
+# فحص الاتصال بقاعدة البيانات
 try:
     client.admin.command('ping')
     print("✅ تم الاتصال بقاعدة البيانات بنجاح!")
 except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
-# رابط الفيديو المرفق الخاص بك
+# رابط الفيديو المرفق
 VIDEO_URL = "https://files.catbox.moe/lwbdy1.mp4"
 
-# رابط ونص المشاركة بالלغة العبرية
+# رابط ونص المشاركة باللغة العبرية
 SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
@@ -55,7 +55,7 @@ def get_welcome_text(first_name):
         "<i>לחץ על שתף ופתח למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
     )
 
-# --- النص الثالث بالعبرية لرسالة VIP (تمت معالجة التنسيق ليعمل بـ HTML بشكل صحيح) ---
+# --- النص الثالث بالعبرية لرسالة VIP ---
 def get_vip_text():
     return (
         "<blockquote>⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n"
@@ -103,7 +103,7 @@ def send_welcome_message(user_id, first_name):
             reply_markup=markup
         )
     except Exception as e: 
-        print(f"Error sending video welcome message: {e}")
+        print(f"Error sending video welcome message to {user_id}: {e}")
 
 # --- الأوامر الأساسية ---
 @bot.message_handler(commands=["start"])
@@ -173,20 +173,26 @@ def handle_callbacks(call):
 
     elif call.data == "show_vip_info":
         now = datetime.now()
-        user = users_col.find_one({"user_id": user_id})
+        
+        # استثناء الأدمن من فحص الـ 24 ساعة
+        if user_id != ADMIN_ID:
+            user = users_col.find_one({"user_id": user_id})
+            if user and user.get("last_vip_request"):
+                if now - user.get("last_vip_request") < timedelta(hours=24):
+                    bot.answer_callback_query(
+                        call.id, 
+                        "⚠️ כבר קיבלת את פרטי ה-VIP. ניתן לבקש שוב רק לאחר 24 שעות!", 
+                        show_alert=True
+                    )
+                    return
 
-        if user and user.get("last_vip_request"):
-            if now - user.get("last_vip_request") < timedelta(hours=24):
-                bot.answer_callback_query(
-                    call.id, 
-                    "⚠️ כבר קיבלת את פרטי ה-VIP. ניתן לבקש שוב רק לאחר 24 שעות!", 
-                    show_alert=True
-                )
-                return
+        # إغلاق زاوية التحميل في الزر أولاً
+        try:
+            bot.answer_callback_query(call.id)
+        except:
+            pass
 
-        users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
-        bot.answer_callback_query(call.id)
-
+        # محاولة إرسال الرسالة إلى المستخدم
         try:
             bot.send_message(
                 call.message.chat.id, 
@@ -194,8 +200,11 @@ def handle_callbacks(call):
                 parse_mode="HTML", 
                 protect_content=True
             )
+            # تحديث وقت الطلب بعد النجاح في الإرسال فقط
+            if user_id != ADMIN_ID:
+                users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
         except Exception as e:
-            print(f"Error sending VIP info: {e}")
+            print(f"Error sending VIP info to {user_id}: {e}")
 
     elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
