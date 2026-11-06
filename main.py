@@ -93,7 +93,6 @@ def send_welcome_message(user_id, first_name):
     markup.row(btn_verify, btn_vip)
 
     try:
-        # إرسال الفيديو مرفقاً بنص الترحيب والأزرار
         bot.send_video(
             user_id, 
             VIDEO_URL, 
@@ -163,6 +162,7 @@ def broadcast(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
+    chat_id = call.message.chat.id
 
     if call.data == "check_share":
         bot.answer_callback_query(
@@ -174,7 +174,6 @@ def handle_callbacks(call):
     elif call.data == "show_vip_info":
         now = datetime.now()
         
-        # استثناء الأدمن من فحص الـ 24 ساعة
         if user_id != ADMIN_ID:
             user = users_col.find_one({"user_id": user_id})
             if user and user.get("last_vip_request"):
@@ -186,38 +185,36 @@ def handle_callbacks(call):
                     )
                     return
 
-        # إغلاق زاوية التحميل في الزر أولاً
         try:
             bot.answer_callback_query(call.id)
         except:
             pass
 
-        # محاولة إرسال الرسالة إلى المستخدم
+        # إرسال الرسالة محميّة ومحمية من النسخ والتوجيه (protect_content=True)
         try:
             bot.send_message(
-                call.message.chat.id, 
+                chat_id, 
                 get_vip_text(), 
-                parse_mode="HTML", 
+                parse_mode="HTML",
                 protect_content=True
             )
-            # تحديث وقت الطلب بعد النجاح في الإرسال فقط
             if user_id != ADMIN_ID:
                 users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
         except Exception as e:
-            print(f"Error sending VIP info to {user_id}: {e}")
+            print(f"❌ فشل إرسال تفاصيل الـ VIP إلى المستخدم {user_id}: {e}")
 
     elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
-        reply_targets[call.message.chat.id] = target_id
+        reply_targets[chat_id] = target_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
         bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_id}`:", protect_content=True)
 
     elif call.data == "confirm_reset":
         users_col.update_many({}, {"$unset": {"last_welcome": "", "last_vip_request": ""}})
-        bot.edit_message_text("✅ تم تصفير جميع التواريخ بنجاح.", call.message.chat.id, call.message.message_id)
+        bot.edit_message_text("✅ تم تصفير جميع التواريخ بنجاح.", chat_id, call.message.message_id)
 
     elif call.data == "cancel_reset":
-        bot.edit_message_text("❌ تم إلغاء العملية.", call.message.chat.id, call.message.message_id)
+        bot.edit_message_text("❌ تم إلغاء العملية.", chat_id, call.message.message_id)
 
 @bot.chat_join_request_handler()
 def join_req(request):
@@ -229,7 +226,7 @@ def send_admin_reply(message):
     target_id = reply_targets.pop(message.chat.id)
     try:
         bot.copy_message(chat_id=target_id, from_chat_id=ADMIN_ID, message_id=message.message_id, protect_content=True)
-        bot.reply_to(message, f"✅ تم إرسال الرد إلى `{target_id}` بنجاح!")
+        bot.reply_to(message, f"✅ تم إرسال الرد إلى `{target_id}` بنجاح!", protect_content=True)
     except Exception as e:
         bot.reply_to(message, f"❌ فشل إرسال الرد: {e}")
 
