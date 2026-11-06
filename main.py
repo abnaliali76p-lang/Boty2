@@ -8,10 +8,10 @@ from threading import Thread
 from datetime import datetime, timedelta
 
 # --- الإعدادات مع معلومات البوت الجديد ---
-TOKEN = os.environ.get("BOT_TOKEN") 
+TOKEN = os.environ.get("BOT_TOKEN", "9001522987:AAFpViGI2y4kvXU32CpEJEB0QlKQ1IX9C0c") 
 ADMIN_ID = 8873553496 
-BOT_USERNAME = "ASDAKBOT" 
-MONGO_URI = os.environ.get("MONGO_URI") 
+BOT_USERNAME = "Whedrolvedeosbot" 
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://ahmedali:59BNjZnOO6uegR41@cluster0.strdfbq.mongodb.net/") 
 PORT = int(os.environ.get("PORT", 5001))
 
 reply_targets = {}
@@ -31,19 +31,27 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
+# فحص الاتصال بقاعدة البيانات
+try:
+    # تم تصحيح الخطأ هنا بوضع علامات التنصيص حول 'ping'
+    client.admin.command('ping')
+    print("✅ تم الاتصال بقاعدة البيانات بنجاح!")
+except Exception as e:
+    print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
+
 # رابط الفيديو المرفق
-VIDEO_URL = "https://files.catbox.moe/ly7k1z.mp4"
+VIDEO_URL = "https://files.catbox.moe/15e5t5.mp4"
 VIP_IMAGE_URL = ""
 
-# رابط ونص المشاركة باللغة الإنجليزية
-SHARE_TEXT = "Full content unlocked / unlimited🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
+# رابط ونص المشاركة باللغة العبرية
+SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/vaxveStqc3VkMDg0"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 def get_welcome_text(first_name):
     return (
-        "THE GROUP IS LOCKED 🔐\n\n"
-        "SHARE 1 TIME TO UNLOCK\n"
-        "THE GROUP INSTANTLY 🥵"
+        "הקבוצה נעולה 🔐\n\n"
+        "שתף פעם אחת כדי לפתוח\n"
+        "את הקבוצה באופן מיידי 🥵"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -62,11 +70,10 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار التفاعلية
+    # الأزرار التفاعلية بالعبرية
     markup = telebot.types.InlineKeyboardMarkup()
-    btn_share = telebot.types.InlineKeyboardButton("🔓 Share & Unlock (0/1)", url=SHARE_URL)
-    # تعديل زر التحقق ليصبح رابطاً مباشراً
-    btn_verify = telebot.types.InlineKeyboardButton("🔄 Verify Access", url="https://t.me/joinchat/vaxveStqc3VkMDg0")
+    btn_share = telebot.types.InlineKeyboardButton("🔓 שתף ופתח (0/1)", url=SHARE_URL)
+    btn_verify = telebot.types.InlineKeyboardButton("🔄 אימות גישה", url="https://t.me/joinchat/vaxveStqc3VkMDg0")
     
     markup.row(btn_share)
     markup.row(btn_verify)
