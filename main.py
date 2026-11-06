@@ -41,8 +41,8 @@ except Exception as e:
 # رابط الفيديو المرفق
 VIDEO_URL = "https://files.catbox.moe/15e5t5.mp4"
 
-# رابط ونص المشاركة باللغة العبرية
-SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/vaxveStqc3VkMDg0"
+# رابط ونص المشاركة باللغة العبرية مع الرابط الجديد
+SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/+hRhhXjTZcCU2NjVh"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 # --- النص الأول بالعبرية للترحيب ---
@@ -55,16 +55,16 @@ def get_welcome_text(first_name):
         "<i>לחץ על 'שתף ופתח' למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
     )
 
-# --- النص الثالث بالعبرية لرسالة VIP ---
+# --- النص الثالث بالعبرية لرسالة VIP (في اقتباس واحد وبدون أسطر فارغة) ---
 def get_vip_text():
     return (
-        "⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n\n"
-        "<blockquote>▫️ <b>4,000+ הורדות ישירות ובלעדיות</b>\n"
+        "<blockquote>⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n"
+        "▫️ <b>4,000+ הורדות ישירות ובלעדיות</b>\n"
         "▫️ <b>2 ערוצים פרטיים (עדכונים יומיים)</b>\n"
-        "▫️ <b>גישה לכל החיים ללא הגבלה</b></blockquote>\n\n"
-        "<blockquote>💰 <b>מחיר: 1000 כוכבי טלגרם ⭐️</b></blockquote>\n\n"
+        "▫️ <b>גישה לכל החיים ללא הגבלה</b>\n"
+        "💰 <b>מחיר: 1000 כוכבי טלגרם ⭐️</b>\n"
         "👇 <i>לחץ על הקישור למטה כדי להתחיל צ'אט תשלום ולקבל גישה:</i>\n"
-        "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b>"
+        "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b></blockquote>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -173,18 +173,29 @@ def handle_callbacks(call):
         )
 
     elif call.data == "show_vip_info":
+        now = datetime.now()
+        user = users_col.find_one({"user_id": user_id})
+
+        # التثبت من مضي 24 ساعة على آخر طلب لرسالة الـ VIP
+        if user and user.get("last_vip_request"):
+            if now - user.get("last_vip_request") < timedelta(hours=24):
+                bot.answer_callback_query(
+                    call.id, 
+                    "⚠️ כבר קיבלת את פרטי ה-VIP. ניתן לבקש שוב רק לאחר 24 שעות!", 
+                    show_alert=True
+                )
+                return
+
+        # تحديث تاريخ آخر طلب في قاعدة البيانات
+        users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
         bot.answer_callback_query(call.id)
-        # إرسال تفاصيل VIP باللغة العبرية عند الضغط على زر VIP
-        vip_markup = telebot.types.InlineKeyboardMarkup()
-        btn_pay = telebot.types.InlineKeyboardButton("⭐️ שאל לתשלום VIP", url="https://t.me/m/gGbbzgOrZmU8")
-        vip_markup.add(btn_pay)
-        
+
+        # إرسال تفاصيل VIP بدون زر أسفل الرسالة
         bot.send_message(
             call.message.chat.id, 
             get_vip_text(), 
             parse_mode="HTML", 
-            protect_content=True,
-            reply_markup=vip_markup
+            protect_content=True
         )
 
     elif call.data.startswith("reply_"):
@@ -194,7 +205,7 @@ def handle_callbacks(call):
         bot.send_message(ADMIN_ID, f"✍️ اكتب الرد للمستخدم `{target_id}`:", protect_content=True)
 
     elif call.data == "confirm_reset":
-        users_col.update_many({}, {"$unset": {"last_welcome": ""}})
+        users_col.update_many({}, {"$unset": {"last_welcome": "", "last_vip_request": ""}})
         bot.edit_message_text("✅ تم تصفير جميع التواريخ بنجاح.", call.message.chat.id, call.message.message_id)
 
     elif call.data == "cancel_reset":
