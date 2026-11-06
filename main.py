@@ -39,10 +39,10 @@ except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
 # رابط الفيديو المرفق
-VIDEO_URL = "https://files.catbox.moe/15e5t5.mp4"
+VIDEO_URL = "https://files.catbox.moe/lwbdy1.mp4"
 
 # رابط ونص المشاركة باللغة العبرية مع الرابط الجديد
-SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/+hRhhXjTZcCU2NjVh"
+SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
 # --- النص الأول بالعبرية للترحيب ---
