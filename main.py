@@ -31,17 +31,17 @@ client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
 users_col = db["users"]
 
-# فحص الاتصال بقاعدة البيانات
+# فحص الاتصال بقاعدة البيانات (تم تصحيح إضافة علامات التنصيص حول كلمة ping)
 try:
     client.admin.command('ping')
     print("✅ تم الاتصال بقاعدة البيانات بنجاح!")
 except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
-# رابط الفيديو المرفق
+# رابط الفيديو المرفق الخاص بك
 VIDEO_URL = "https://files.catbox.moe/lwbdy1.mp4"
 
-# رابط ونص المشاركة باللغة العبرية مع الرابط الجديد
+# رابط ونص المشاركة بالלغة العبرية
 SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
@@ -52,10 +52,10 @@ def get_welcome_text(first_name):
         f"היי <b>{first_name}</b>, השער האישי שלך לכספת מוכן.\n\n"
         "<blockquote>📍 <b>סטטוס כספת:</b> נעול 🔐 (נדרשות 2 שיתופים)\n"
         "🎬 <b>קבצים זמינים:</b> 67,000+ קבצים בלעדיים</blockquote>\n\n"
-        "<i>לחץ על 'שתף ופתח' למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
+        "<i>לחץ על שתף ופתח למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
     )
 
-# --- النص الثالث بالعبرية لرسالة VIP (في اقتباس واحد وبدون أسطر فارغة) ---
+# --- النص الثالث بالعبرية لرسالة VIP (تمت معالجة التنسيق ليعمل بـ HTML بشكل صحيح) ---
 def get_vip_text():
     return (
         "<blockquote>⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n"
@@ -63,7 +63,7 @@ def get_vip_text():
         "▫️ <b>2 ערוצים פרטיים (עדכונים יומיים)</b>\n"
         "▫️ <b>גישה לכל החיים ללא הגבלה</b>\n"
         "💰 <b>מחיר: 1000 כוכבי טלגרם ⭐️</b>\n"
-        "👇 <i>לחץ על הקישור למטה כדי להתחיל צ'אט תשלום ולקבל גישה:</i>\n"
+        "👇 <i>לחץ על הקישור למטה כדי להתחיל צאט תשלום ולקבל גישה:</i>\n"
         "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b></blockquote>"
     )
 
@@ -165,10 +165,9 @@ def handle_callbacks(call):
     user_id = call.from_user.id
 
     if call.data == "check_share":
-        # تنبيه منبثق بالعبرية عند إخفاق التحقق
         bot.answer_callback_query(
             call.id, 
-            "⚠️ בדיקת מערכת: השיתוף לא הושלם (0/1). אנא שתף בצ'אט אחד תחילה!", 
+            "⚠️ בדיקת מערכת: השיתוף לא הושלם (0/1). אנא שתף בצ אט אחד תחילה!", 
             show_alert=True
         )
 
@@ -176,7 +175,6 @@ def handle_callbacks(call):
         now = datetime.now()
         user = users_col.find_one({"user_id": user_id})
 
-        # التثبت من مضي 24 ساعة على آخر طلب لرسالة الـ VIP
         if user and user.get("last_vip_request"):
             if now - user.get("last_vip_request") < timedelta(hours=24):
                 bot.answer_callback_query(
@@ -186,17 +184,18 @@ def handle_callbacks(call):
                 )
                 return
 
-        # تحديث تاريخ آخر طلب في قاعدة البيانات
         users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
         bot.answer_callback_query(call.id)
 
-        # إرسال تفاصيل VIP بدون زر أسفل الرسالة
-        bot.send_message(
-            call.message.chat.id, 
-            get_vip_text(), 
-            parse_mode="HTML", 
-            protect_content=True
-        )
+        try:
+            bot.send_message(
+                call.message.chat.id, 
+                get_vip_text(), 
+                parse_mode="HTML", 
+                protect_content=True
+            )
+        except Exception as e:
+            print(f"Error sending VIP info: {e}")
 
     elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
