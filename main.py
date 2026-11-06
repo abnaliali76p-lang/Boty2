@@ -33,7 +33,6 @@ users_col = db["users"]
 
 # فحص الاتصال بقاعدة البيانات
 try:
-    # تم تصحيح الخطأ هنا بوضع علامات التنصيص حول 'ping'
     client.admin.command('ping')
     print("✅ تم الاتصال بقاعدة البيانات بنجاح!")
 except Exception as e:
@@ -41,17 +40,31 @@ except Exception as e:
 
 # رابط الفيديو المرفق
 VIDEO_URL = "https://files.catbox.moe/15e5t5.mp4"
-VIP_IMAGE_URL = ""
 
 # رابط ونص المشاركة باللغة العبرية
 SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/vaxveStqc3VkMDg0"
 SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 
+# --- النص الأول بالعبرية للترحيب ---
 def get_welcome_text(first_name):
     return (
-        "הקבוצה נעולה 🔐\n\n"
-        "שתף פעם אחת כדי לפתוח\n"
-        "את הקבוצה באופן מיידי 🥵"
+        f"🔥 <b>גישה אושרה: אוסף VIP פתוח!</b>\n\n"
+        f"היי <b>{first_name}</b>, השער האישי שלך לכספת מוכן.\n\n"
+        "<blockquote>📍 <b>סטטוס כספת:</b> נעול 🔐 (נדרשות 2 שיתופים)\n"
+        "🎬 <b>קבצים זמינים:</b> 67,000+ קבצים בלעדיים</blockquote>\n\n"
+        "<i>לחץ על 'שתף ופתח' למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
+    )
+
+# --- النص الثالث بالعبرية لرسالة VIP ---
+def get_vip_text():
+    return (
+        "⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n\n"
+        "<blockquote>▫️ <b>4,000+ הורדות ישירות ובלעדיות</b>\n"
+        "▫️ <b>2 ערוצים פרטיים (עדכונים יומיים)</b>\n"
+        "▫️ <b>גישה לכל החיים ללא הגבלה</b></blockquote>\n\n"
+        "<blockquote>💰 <b>מחיר: 1000 כוכבי טלגרם ⭐️</b></blockquote>\n\n"
+        "👇 <i>לחץ על הקישור למטה כדי להתחיל צ'אט תשלום ולקבל גישה:</i>\n"
+        "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -73,10 +86,11 @@ def send_welcome_message(user_id, first_name):
     # الأزرار التفاعلية بالعبرية
     markup = telebot.types.InlineKeyboardMarkup()
     btn_share = telebot.types.InlineKeyboardButton("🔓 שתף ופתח (0/1)", url=SHARE_URL)
-    btn_verify = telebot.types.InlineKeyboardButton("🔄 אימות גישה", url="https://t.me/joinchat/vaxveStqc3VkMDg0")
+    btn_verify = telebot.types.InlineKeyboardButton("🔄 אימות גישה", callback_data="check_share")
+    btn_vip = telebot.types.InlineKeyboardButton("💎 מעבר VIP מיידי", callback_data="show_vip_info")
     
     markup.row(btn_share)
-    markup.row(btn_verify)
+    markup.row(btn_verify, btn_vip)
 
     try:
         # إرسال الفيديو مرفقاً بنص الترحيب والأزرار
@@ -150,7 +164,30 @@ def broadcast(message):
 def handle_callbacks(call):
     user_id = call.from_user.id
 
-    if call.data.startswith("reply_"):
+    if call.data == "check_share":
+        # تنبيه منبثق بالعبرية عند إخفاق التحقق
+        bot.answer_callback_query(
+            call.id, 
+            "⚠️ בדיקת מערכת: השיתוף לא הושלם (0/1). אנא שתף בצ'אט אחד תחילה!", 
+            show_alert=True
+        )
+
+    elif call.data == "show_vip_info":
+        bot.answer_callback_query(call.id)
+        # إرسال تفاصيل VIP باللغة العبرية عند الضغط على زر VIP
+        vip_markup = telebot.types.InlineKeyboardMarkup()
+        btn_pay = telebot.types.InlineKeyboardButton("⭐️ שאל לתשלום VIP", url="https://t.me/m/gGbbzgOrZmU8")
+        vip_markup.add(btn_pay)
+        
+        bot.send_message(
+            call.message.chat.id, 
+            get_vip_text(), 
+            parse_mode="HTML", 
+            protect_content=True,
+            reply_markup=vip_markup
+        )
+
+    elif call.data.startswith("reply_"):
         target_id = call.data.split("_")[1]
         reply_targets[call.message.chat.id] = target_id
         bot.answer_callback_query(call.id, "✅ أرسل الرد الآن في الشات")
