@@ -48,23 +48,19 @@ SHARE_URL = f"https://t.me/share/url?url={urllib.parse.quote(SHARE_TEXT)}"
 # --- النص الأول بالعبرية للترحيب ---
 def get_welcome_text(first_name):
     return (
-        f"🔥 <b>גישה אושרה: אוסף VIP פתוח!</b>\n\n"
-        f"היי <b>{first_name}</b>, השער האישי שלך לכספת מוכן.\n\n"
-        "<blockquote>📍 <b>סטטוס כספת:</b> נעול 🔐 (נדרשות 2 שיתופים)\n"
-        "🎬 <b>קבצים זמינים:</b> 67,000+ קבצים בלעדיים</blockquote>\n\n"
-        "<i>לחץ על שתף ופתח למטה כדי לקבל את הגישה שלך עכשיו! 🔞</i>"
+        f"<b>היי {first_name}! 👋🔥\n\n"
+        f"פתיחת הקבוצה נעולה (0/2 שיתופים) 🎁\n"
+        f"+50,000 סרטונים בלעדיים מחכים לך!</b>\n\n"
+        f"<blockquote>🚀 לחצו על \"שתף\" ושתפו את הקישור עם 2 חברים או קבוצות לפתיחה מיידית 👇</blockquote>"
     )
 
 # --- النص الثالث بالعبرية لرسالة VIP ---
 def get_vip_text():
     return (
-        "<blockquote>⚡ <b>גישת VIP ללא הגבלה</b> ⚡\n"
-        "▫️ <b>4,000+ הורדות ישירות ובלעדיות</b>\n"
-        "▫️ <b>2 ערוצים פרטיים (עדכונים יומיים)</b>\n"
-        "▫️ <b>גישה לכל החיים ללא הגבלה</b>\n"
-        "💰 <b>מחיר: 1000 כוכבי טלגרם ⭐️</b>\n"
-        "👇 <i>לחץ על הקישור למטה כדי להתחיל צאט תשלום ולקבל גישה:</i>\n"
-        "<b>⭐️ https://t.me/m/gGbbzgOrZmU8</b></blockquote>"
+        "<blockquote><b>💎 פתיחת VIP ישירה (ללא שיתוף)</b></blockquote>\n"
+        "<blockquote><b>🔥 גישה מלאה + קבוצות פרטיות לכל החיים!</b></blockquote>\n"
+        "<blockquote><b>💰 מחיר כניסה: 1000 כוכבים להרשמה עכשיו, שלח הודעה לתשלום וקבל את הקישורים מיידית: ⬇️</b></blockquote>\n"
+        "<b>https://t.me/m/gGbbzgOrZmU8</b>"
     )
 
 def send_welcome_message(user_id, first_name):
@@ -83,14 +79,11 @@ def send_welcome_message(user_id, first_name):
         except: 
             pass
 
-    # الأزرار التفاعلية بالعبرية
+    # الأزرار التفاعلية بالعبرية (كل زر في سطر مستقل تحت الآخر)
     markup = telebot.types.InlineKeyboardMarkup()
-    btn_share = telebot.types.InlineKeyboardButton("🔓 שתף ופתח (0/1)", url=SHARE_URL)
-    btn_verify = telebot.types.InlineKeyboardButton("🔄 אימות גישה", callback_data="check_share")
-    btn_vip = telebot.types.InlineKeyboardButton("💎 מעבר VIP מיידי", callback_data="show_vip_info")
-    
-    markup.row(btn_share)
-    markup.row(btn_verify, btn_vip)
+    markup.add(telebot.types.InlineKeyboardButton("🔗 שיתוף (0/2)", url=SHARE_URL))
+    markup.add(telebot.types.InlineKeyboardButton("📥 אימות פתיחה", callback_data="check_share"))
+    markup.add(telebot.types.InlineKeyboardButton("👑 פתיחה מהירה - VIP", callback_data="show_vip_info"))
 
     try:
         bot.send_video(
@@ -167,7 +160,7 @@ def handle_callbacks(call):
     if call.data == "check_share":
         bot.answer_callback_query(
             call.id, 
-            "⚠️ בדיקת מערכת: השיתוף לא הושלם (0/1). אנא שתף בצ אט אחד תחילה!", 
+            "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲", 
             show_alert=True
         )
 
@@ -180,7 +173,7 @@ def handle_callbacks(call):
                 if now - user.get("last_vip_request") < timedelta(hours=24):
                     bot.answer_callback_query(
                         call.id, 
-                        "⚠️ כבר קיבלת את פרטי ה-VIP. ניתן לבקש שוב רק לאחר 24 שעות!", 
+                        "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.", 
                         show_alert=True
                     )
                     return
@@ -190,7 +183,6 @@ def handle_callbacks(call):
         except:
             pass
 
-        # إرسال الرسالة محميّة ومحمية من النسخ والتوجيه (protect_content=True)
         try:
             bot.send_message(
                 chat_id, 
