@@ -1,4 +1,4 @@
-import os
+Import os
 import time
 import telebot
 from pymongo import MongoClient
@@ -38,8 +38,8 @@ try:
 except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
-# رابط الصورة المرفقة للترحيب
-IMAGE_URL = "https://files.catbox.moe/xty9p9.jpg"
+# رابط الفيديو المرفق
+VIDEO_URL = "https://files.catbox.moe/k79dhg.mp4"
 
 # رابط ونص المشاركة باللغة العبرية
 SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
@@ -86,16 +86,16 @@ def send_welcome_message(user_id, first_name):
     markup.add(telebot.types.InlineKeyboardButton("👑 פתיחה מהירה - VIP", callback_data="show_vip_info"))
 
     try:
-        bot.send_photo(
+        bot.send_video(
             user_id, 
-            IMAGE_URL, 
+            VIDEO_URL, 
             caption=get_welcome_text(first_name), 
             parse_mode="HTML", 
             protect_content=True, 
             reply_markup=markup
         )
     except Exception as e: 
-        print(f"Error sending photo welcome message to {user_id}: {e}")
+        print(f"Error sending video welcome message to {user_id}: {e}")
 
 # --- الأوامر الأساسية ---
 @bot.message_handler(commands=["start"])
