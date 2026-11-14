@@ -39,7 +39,7 @@ except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
 # رابط الفيديو المرفق
-VIDEO_URL = "https://qu.ax/zM4Pc"
+VIDEO_URL = "https://qu.ax/YazP4"
 
 # رابط ونص المشاركة باللغة العبرية
 SHARE_TEXT = "התוכן המלא פתוח / ללא הגבלה🔥👇 https://t.me/joinchat/hRhhXjTZcCU2NjVh"
