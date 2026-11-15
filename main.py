@@ -118,6 +118,58 @@ def get_setting(key):
 def update_setting(key, value):
     settings_col.update_one({"_id": "bot_config"}, {"$set": {key: value}}, upsert=True)
 
+def extract_html_with_custom_emojis(message):
+    text = message.text or ""
+    entities = message.entities or []
+    if not entities:
+        return message.html_text.strip()
+
+    utf16_text = text.encode("utf-16-le")
+    chars = [utf16_text[i:i+2].decode("utf-16-le") for i in range(0, len(utf16_text), 2)]
+
+    insertions = {}
+    for ent in entities:
+        start = ent.offset
+        end = ent.offset + ent.length
+        open_tag, close_tag = "", ""
+
+        if ent.type == "custom_emoji":
+            open_tag = f'<tg-emoji emoji-id="{ent.custom_emoji_id}">'
+            close_tag = "</tg-emoji>"
+        elif ent.type == "bold":
+            open_tag, close_tag = "<b>", "</b>"
+        elif ent.type == "italic":
+            open_tag, close_tag = "<i>", "</i>"
+        elif ent.type == "underline":
+            open_tag, close_tag = "<u>", "</u>"
+        elif ent.type == "strikethrough":
+            open_tag, close_tag = "<s>", "</s>"
+        elif ent.type == "code":
+            open_tag, close_tag = "<code>", "</code>"
+        elif ent.type == "pre":
+            open_tag, close_tag = "<pre>", "</pre>"
+        elif ent.type == "spoiler":
+            open_tag, close_tag = '<span class="tg-spoiler">', "</span>"
+        elif ent.type == "blockquote":
+            open_tag, close_tag = "<blockquote>", "</blockquote>"
+        elif ent.type == "expandable_blockquote":
+            open_tag, close_tag = "<blockquote expandable>", "</blockquote>"
+        elif ent.type == "text_link":
+            open_tag, close_tag = f'<a href="{ent.url}">', "</a>"
+
+        if open_tag:
+            insertions.setdefault(start, []).append(open_tag)
+            insertions.setdefault(end, []).insert(0, close_tag)
+
+    result = []
+    for idx in range(len(chars) + 1):
+        if idx in insertions:
+            result.extend(insertions[idx])
+        if idx < len(chars):
+            result.append(chars[idx])
+
+    return "".join(result).strip()
+
 def is_admin_or_sub(user_id):
     return user_id == ADMIN_ID or user_id in (get_setting("sub_admins") or [])
 
@@ -995,7 +1047,7 @@ def handle_admin_messages(message):
         if state.startswith("edit_") and message.content_type == "text":
             key = state.replace("edit_", "")
             html_keys = ["welcome_text", "vip_text", "fsub_text", "maintenance_text", "auto_reply_text", "bc_footer"]
-            val = message.html_text.strip() if key in html_keys else message.text.strip()
+            val = extract_html_with_custom_emojis(message) if key in html_keys else message.text.strip()
             if key == "cooldown_hours":
                 val = int(val) if val.isdigit() else 24
             elif key == "bc_footer" and val == "حذف":
