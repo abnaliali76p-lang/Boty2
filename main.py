@@ -43,13 +43,40 @@ try:
 except Exception as e:
     print(f"❌ خطأ في الاتصال بقاعدة البيانات: {e}")
 
-# --- إدارة الإعدادات الحية من قاعدة البيانات ---
+# --- إدارة الإعدادات الحية والنصوص والأزرار من قاعدة البيانات ---
 DEFAULT_SETTINGS = {
+    # الروابط والأسعار
     "video_url": "https://qu.ax/YazP4",
     "share_link": "https://t.me/joinchat/hRhhXjTZcCU2NjVh",
-    "vip_stars_url": "https://t.me/m/gGbbzgOrZmU8",
+    "vip_stars_url": "https://t.me/m/7_KEyMT7OTg8",
     "alt_pay_url": "https://t.me/Gh64yu",
-    "vip_price": "1000"
+    "vip_price": "1000",
+
+    # النصوص القابلة للتعديل
+    "welcome_text": (
+        "<b>היי {first_name}! 👋🔥\n\n"
+        "פתיחת הקבוצה נעולה (0/2 שיתופים) 🎁\n"
+        "+50,000 סרטונים בלעדיים מחכים לך!</b>\n\n"
+        "<blockquote>🚀 לחצו על \"שתף\" ושתפו את הקישור עם 2 חברים או קבוצות לפתיחה מיידית 👇</blockquote>"
+    ),
+    "vip_text": (
+        "<blockquote><b>מחיר כניסה: 1000 כוכבי טלגרם 😎</b></blockquote>\n"
+        "<blockquote><b>התוכן כולל: 4,000 סרטונים + 2 קבוצות במתנה (ישראלית וערבית) ❤️</b></blockquote>\n"
+        "<blockquote><b>שלח הודעה כאן לתשלום ולקבלת הקישורים:⬇️✅</b></blockquote>\n"
+        "<b>https://t.me/m/7_KEyMT7OTg8</b>"
+    ),
+    "btn_share_text": "🔗 שיתוף (0/2)",
+    "btn_verify_text": "📥 אימות פתיחה",
+    "btn_vip_text": "👑 פתיחה מהירה - VIP",
+    "btn_pay_stars_text": "⭐ תשלום כוכבים (הודעה ישירה)",
+    "btn_pay_alt_text": "💳 תשלום בדרך אחרת (ללא כוכבים)",
+
+    # التحكم في إظهار وإخفاء الأزرار (True = ظاهر, False = مخفي)
+    "show_btn_share": True,
+    "show_btn_verify": True,
+    "show_btn_vip": True,
+    "show_btn_pay_stars": True,
+    "show_btn_pay_alt": True
 }
 
 def get_setting(key):
@@ -63,40 +90,30 @@ def update_setting(key, value):
 
 # --- متغيرات الحالة للعمليات التفاعلية ---
 reply_targets = {}
-admin_states = {}   # لتعديل الإعدادات من داخل البوت
+admin_states = {}   # لتعديل الإعدادات والنصوص من داخل البوت
 bc_sessions = {}    # لإدارة جلسة الإذاعة المتقدمة
 
-# --- النصوص الأساسية باللغة العبرية ---
+# --- جلب النصوص والروابط الديناميكية ---
 def get_texts(first_name=""):
-    price = get_setting("vip_price")
-    stars_url = get_setting("vip_stars_url")
-    alt_url = get_setting("alt_pay_url")
     share_link = get_setting("share_link")
     share_text = f"התוכן המלא פתוח / ללא הגבלה🔥👇 {share_link}"
 
+    raw_welcome = get_setting("welcome_text")
+    formatted_welcome = raw_welcome.replace("{first_name}", first_name)
+
     return {
-        "welcome": (
-            f"<b>היי {first_name}! 👋🔥\n\n"
-            f"פתיחת הקבוצה נעולה (0/2 שיתופים) 🎁\n"
-            f"+50,000 סרטונים בלעדיים מחכים לך!</b>\n\n"
-            f"<blockquote>🚀 לחצו על \"שתף\" ושתפו את הקישור עם 2 חברים או קבוצות לפתיחה מיידית 👇</blockquote>"
-        ),
-        "btn_share": "🔗 שיתוף (0/2)",
-        "btn_verify": "📥 אימות פתיחה",
-        "btn_vip": "👑 פתיחה מהירה - VIP",
+        "welcome": formatted_welcome,
+        "btn_share": get_setting("btn_share_text"),
+        "btn_verify": get_setting("btn_verify_text"),
+        "btn_vip": get_setting("btn_vip_text"),
         "share_url": f"https://t.me/share/url?url={urllib.parse.quote(share_text)}",
         "share_alert": "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲",
         "vip_already": "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.",
-        "vip_text": (
-            f"<blockquote><b>💎 פתיחת VIP ישירה (ללא שיתוף)</b></blockquote>\n"
-            f"<blockquote><b>🔥 גישה מלאה + קבוצות פרטיות לכל החיים!</b></blockquote>\n"
-            f"<blockquote><b>💰 מחיר כניסה: {price} כוכבים</b></blockquote>\n\n"
-            f"👇 בחרו את שיטת התשלום המועדפת עליכם:"
-        ),
-        "btn_pay_stars": f"⭐ תשלום {price} כוכבים (הודעה ישירה)",
-        "btn_pay_alt": "💳 תשלום בדרך אחרת (ללא כוכבים)",
-        "stars_url": stars_url,
-        "alt_url": alt_url
+        "vip_text": get_setting("vip_text"),
+        "btn_pay_stars": get_setting("btn_pay_stars_text"),
+        "btn_pay_alt": get_setting("btn_pay_alt_text"),
+        "stars_url": get_setting("vip_stars_url"),
+        "alt_url": get_setting("alt_pay_url")
     }
 
 # --- إرسال رسالة الترحيب ---
@@ -136,9 +153,14 @@ def send_welcome_message(user_id, first_name):
 
     t = get_texts(first_name)
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(t["btn_share"], url=t["share_url"]))
-    markup.add(types.InlineKeyboardButton(t["btn_verify"], callback_data="check_share"))
-    markup.add(types.InlineKeyboardButton(t["btn_vip"], callback_data="show_vip_info"))
+
+    # إضافة الأزرار بناءً على إعدادات الإظهار والإخفاء
+    if get_setting("show_btn_share"):
+        markup.add(types.InlineKeyboardButton(t["btn_share"], url=t["share_url"]))
+    if get_setting("show_btn_verify"):
+        markup.add(types.InlineKeyboardButton(t["btn_verify"], callback_data="check_share"))
+    if get_setting("show_btn_vip"):
+        markup.add(types.InlineKeyboardButton(t["btn_vip"], callback_data="show_vip_info"))
 
     try:
         bot.send_video(
@@ -147,7 +169,7 @@ def send_welcome_message(user_id, first_name):
             caption=t["welcome"],
             parse_mode="HTML",
             protect_content=True,
-            reply_markup=markup
+            reply_markup=markup if markup.keyboard else None
         )
     except Exception as e:
         print(f"Error sending welcome video to {user_id}: {e}")
@@ -169,8 +191,12 @@ def get_admin_keyboard():
         types.InlineKeyboardButton("📢 إذاعة متقدمة", callback_data="adm_bc_start")
     )
     markup.add(
-        types.InlineKeyboardButton("⚙️ تعديل الروابط والأسعار", callback_data="adm_settings"),
-        types.InlineKeyboardButton("💾 نسخة احتياطية (Backup)", callback_data="adm_backup")
+        types.InlineKeyboardButton("⚙️ الروابط والأسعار", callback_data="adm_settings"),
+        types.InlineKeyboardButton("📝 تعديل النصوص", callback_data="adm_texts")
+    )
+    markup.add(
+        types.InlineKeyboardButton("👁️ إظهار/إخفاء الأزرار", callback_data="adm_buttons_vis"),
+        types.InlineKeyboardButton("💾 نسخة احتياطية", callback_data="adm_backup")
     )
     markup.add(
         types.InlineKeyboardButton("🔄 تصفير التواريخ", callback_data="confirm_reset_ask")
@@ -190,7 +216,7 @@ def admin_panel(message):
             protect_content=True
         )
 
-# --- قائمة تعديل الإعدادات الحية ---
+# --- قائمة تعديل الروابط والأسعار ---
 def get_settings_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
@@ -199,6 +225,37 @@ def get_settings_keyboard():
         types.InlineKeyboardButton("⭐ رابط الدفع بالنجوم", callback_data="set_vip_stars_url"),
         types.InlineKeyboardButton("💳 رابط الدفع البديل", callback_data="set_alt_pay_url"),
         types.InlineKeyboardButton(f"💰 سعر VIP بالنجوم (الحالي: {get_setting('vip_price')})", callback_data="set_vip_price"),
+        types.InlineKeyboardButton("🔙 رجوع للوحة الرئيسية", callback_data="adm_home")
+    )
+    return markup
+
+# --- قائمة تعديل النصوص الحية ---
+def get_texts_keyboard():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        types.InlineKeyboardButton("💬 تعديل نص الترحيب", callback_data="set_welcome_text"),
+        types.InlineKeyboardButton("💎 تعديل نص رسالة VIP", callback_data="set_vip_text"),
+        types.InlineKeyboardButton("🔗 نص زر المشاركة", callback_data="set_btn_share_text"),
+        types.InlineKeyboardButton("📥 نص زر التحقق", callback_data="set_btn_verify_text"),
+        types.InlineKeyboardButton("👑 نص زر فتح VIP", callback_data="set_btn_vip_text"),
+        types.InlineKeyboardButton("⭐ نص زر الدفع بالنجوم", callback_data="set_btn_pay_stars_text"),
+        types.InlineKeyboardButton("💳 نص زر الدفع البديل", callback_data="set_btn_pay_alt_text"),
+        types.InlineKeyboardButton("🔙 رجوع للوحة الرئيسية", callback_data="adm_home")
+    )
+    return markup
+
+# --- قائمة إظهار وإخفاء الأزرار ---
+def get_buttons_vis_keyboard():
+    def status_icon(key):
+        return "✅ ظاهر" if get_setting(key) else "❌ مخفي"
+
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        types.InlineKeyboardButton(f"زر المشاركة: {status_icon('show_btn_share')}", callback_data="tog_show_btn_share"),
+        types.InlineKeyboardButton(f"زر التحقق: {status_icon('show_btn_verify')}", callback_data="tog_show_btn_verify"),
+        types.InlineKeyboardButton(f"زر فتح VIP: {status_icon('show_btn_vip')}", callback_data="tog_show_btn_vip"),
+        types.InlineKeyboardButton(f"زر الدفع بالنجوم (داخل VIP): {status_icon('show_btn_pay_stars')}", callback_data="tog_show_btn_pay_stars"),
+        types.InlineKeyboardButton(f"زر الدفع البديل (داخل VIP): {status_icon('show_btn_pay_alt')}", callback_data="tog_show_btn_pay_alt"),
         types.InlineKeyboardButton("🔙 رجوع للوحة الرئيسية", callback_data="adm_home")
     )
     return markup
@@ -387,17 +444,17 @@ def handle_callbacks(call):
             pass
 
         vip_markup = types.InlineKeyboardMarkup(row_width=1)
-        vip_markup.add(
-            types.InlineKeyboardButton(t["btn_pay_stars"], url=t["stars_url"]),
-            types.InlineKeyboardButton(t["btn_pay_alt"], url=t["alt_url"])
-        )
+        if get_setting("show_btn_pay_stars"):
+            vip_markup.add(types.InlineKeyboardButton(t["btn_pay_stars"], url=t["stars_url"]))
+        if get_setting("show_btn_pay_alt"):
+            vip_markup.add(types.InlineKeyboardButton(t["btn_pay_alt"], url=t["alt_url"]))
 
         try:
             bot.send_message(
                 chat_id,
                 t["vip_text"],
                 parse_mode="HTML",
-                reply_markup=vip_markup,
+                reply_markup=vip_markup if vip_markup.keyboard else None,
                 protect_content=True
             )
             if user_id != ADMIN_ID:
@@ -451,11 +508,35 @@ def handle_callbacks(call):
 
         elif call.data == "adm_settings":
             bot.edit_message_text(
-                "⚙️ **إعدادات البوت الحية**\nاختر العنصر الذي تريد تعديله (سيتم حفظه فوراً في قاعدة البيانات):",
+                "⚙️ **إعدادات الروابط والأسعار**\nاختر العنصر الذي تريد تعديله:",
                 chat_id, call.message.message_id,
                 reply_markup=get_settings_keyboard(),
                 parse_mode="Markdown"
             )
+
+        elif call.data == "adm_texts":
+            bot.edit_message_text(
+                "📝 **تعديل النصوص الحية**\nاختر النص الذي تريد تعديله (يدعم تنسيق HTML مثل `<b>` و `<blockquote>`):\n"
+                "💡 في نص الترحيب يمكنك كتابة `{first_name}` ليضع اسم المستخدم تلقائياً.",
+                chat_id, call.message.message_id,
+                reply_markup=get_texts_keyboard(),
+                parse_mode="Markdown"
+            )
+
+        elif call.data == "adm_buttons_vis":
+            bot.edit_message_text(
+                "👁️ **التحكم في إظهار وإخفاء الأزرار**\nاضغط على أي زر لتبديل حالته فوراً:",
+                chat_id, call.message.message_id,
+                reply_markup=get_buttons_vis_keyboard(),
+                parse_mode="Markdown"
+            )
+
+        elif call.data.startswith("tog_"):
+            vis_key = call.data.replace("tog_", "")
+            current_val = bool(get_setting(vis_key))
+            update_setting(vis_key, not current_val)
+            bot.answer_callback_query(call.id, "✅ تم تحديث حالة الزر!")
+            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_buttons_vis_keyboard())
 
         elif call.data.startswith("set_"):
             setting_key = call.data.replace("set_", "")
@@ -465,10 +546,23 @@ def handle_callbacks(call):
                 "share_link": "رابط القناة/المجموعة للمشاركة",
                 "vip_stars_url": "رابط حسابك للدفع بالنجوم",
                 "alt_pay_url": "رابط حسابك للدفع البديل",
-                "vip_price": "سعر الباقة بالنجوم (رقم فقط، مثلاً: 1000)"
+                "vip_price": "سعر الباقة بالنجوم (رقم فقط، مثلاً: 1000)",
+                "welcome_text": "نص رسالة الترحيب الجديد",
+                "vip_text": "نص رسالة الـ VIP الجديد",
+                "btn_share_text": "النص الجديد لزر المشاركة",
+                "btn_verify_text": "النص الجديد لزر التحقق",
+                "btn_vip_text": "النص الجديد لزر فتح VIP",
+                "btn_pay_stars_text": "النص الجديد لزر الدفع بالنجوم",
+                "btn_pay_alt_text": "النص الجديد لزر الدفع البديل"
             }
+            current_val = get_setting(setting_key)
             bot.answer_callback_query(call.id)
-            bot.send_message(ADMIN_ID, f"✍️ أرسل الآن **{names.get(setting_key)}**:", parse_mode="Markdown")
+            bot.send_message(
+                ADMIN_ID,
+                f"✍️ أرسل الآن **{names.get(setting_key, setting_key)}**:\n\n"
+                f"📌 **القيمة الحالية:**\n`{current_val}`",
+                parse_mode="Markdown"
+            )
 
         elif call.data == "adm_bc_start":
             markup = types.InlineKeyboardMarkup(row_width=1)
@@ -553,14 +647,14 @@ def handle_callbacks(call):
             users_col.update_many({}, {"$unset": {"last_welcome": "", "last_vip_request": ""}})
             bot.edit_message_text("✅ تم تصفير جميع التواريخ بنجاح.", chat_id, call.message.message_id, reply_markup=get_admin_keyboard())
 
-# --- معالجة رسائل الأدمن (الإعدادات، الإذاعة، والردود) ---
+# --- معالجة رسائل الأدمن (الإعدادات، النصوص، الإذاعة، والردود) ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID, content_types=['text', 'photo', 'video', 'animation', 'document', 'voice', 'audio'])
 def handle_admin_messages(message):
     if ADMIN_ID in admin_states and message.content_type == 'text':
         state = admin_states.pop(ADMIN_ID)
         key = state.replace("edit_", "")
         update_setting(key, message.text.strip())
-        bot.reply_to(message, "✅ تم تحديث الإعداد وحفظه في قاعدة البيانات بنجاح!", reply_markup=get_admin_keyboard())
+        bot.reply_to(message, "✅ تم التحديث والحفظ في قاعدة البيانات بنجاح!", reply_markup=get_admin_keyboard())
         return
 
     if ADMIN_ID in bc_sessions:
