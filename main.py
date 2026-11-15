@@ -1,31 +1,33 @@
 import os
 import time
-import telebot
-from pymongo import MongoClient
 import urllib.parse
-from flask import Flask
-from threading import Thread
 from datetime import datetime, timedelta
+from threading import Thread
+
+import telebot
+from telebot.apihelper import ApiTelegramException
+from pymongo import MongoClient
+from flask import Flask
 
 # --- الإعدادات (تُجلب من متغيرات البيئة في Render لأعلى درجات الأمان) ---
-TOKEN = os.environ.get("BOT_TOKEN") 
-ADMIN_ID = 8873553496 
-BOT_USERNAME = "Whedrolvedeosbot" 
-MONGO_URI = os.environ.get("MONGO_URI") 
+TOKEN = os.environ.get("BOT_TOKEN")
+ADMIN_ID = 8873553496
+BOT_USERNAME = "Whedrolvedeosbot"
+MONGO_URI = os.environ.get("MONGO_URI")
 PORT = int(os.environ.get("PORT", 5001))
 
 reply_targets = {}
 app = Flask(__name__)
 
 @app.route("/")
-def home(): 
+def home():
     return "Bot is running!"
 
-def run_web(): 
+def run_web():
     app.run(host="0.0.0.0", port=PORT)
 
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook() 
+bot.remove_webhook()
 
 client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
 db = client["bot_database_new"]
@@ -70,13 +72,22 @@ def send_welcome_message(user_id, first_name):
         if user and user.get("last_welcome"):
             if now - user.get("last_welcome") < timedelta(hours=24):
                 return
-        users_col.update_one({"user_id": user_id}, {"$set": {"last_welcome": now, "name": first_name}}, upsert=True)
-        
+        users_col.update_one(
+            {"user_id": user_id},
+            {"$set": {"last_welcome": now, "name": first_name}},
+            upsert=True
+        )
+
         try:
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}"))
-            bot.send_message(ADMIN_ID, f"👤 **مشترك جديد:** {first_name}\nID: `{user_id}`", reply_markup=markup, protect_content=True)
-        except: 
+            bot.send_message(
+                ADMIN_ID,
+                f"👤 **مشترك جديد:** {first_name}\nID: `{user_id}`",
+                reply_markup=markup,
+                protect_content=True
+            )
+        except:
             pass
 
     # الأزرار التفاعلية بالعبرية (كل زر في سطر مستقل تحت الآخر)
@@ -87,14 +98,14 @@ def send_welcome_message(user_id, first_name):
 
     try:
         bot.send_video(
-            user_id, 
-            VIDEO_URL, 
-            caption=get_welcome_text(first_name), 
-            parse_mode="HTML", 
-            protect_content=True, 
+            user_id,
+            VIDEO_URL,
+            caption=get_welcome_text(first_name),
+            parse_mode="HTML",
+            protect_content=True,
             reply_markup=markup
         )
-    except Exception as e: 
+    except Exception as e:
         print(f"Error sending video welcome message to {user_id}: {e}")
 
 # --- الأوامر الأساسية ---
@@ -108,7 +119,12 @@ def reset_all(message):
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton("✅ نعم، تصفير التواريخ", callback_data="confirm_reset"))
         markup.add(telebot.types.InlineKeyboardButton("❌ إلغاء", callback_data="cancel_reset"))
-        bot.reply_to(message, "⚠️ **تنبيه:** هل أنت متأكد من تصفير تواريخ الترحيب لجميع المستخدمين؟", reply_markup=markup, protect_content=True)
+        bot.reply_to(
+            message,
+            "⚠️ **تنبيه:** هل أنت متأكد من تصفير تواريخ الترحيب لجميع المستخدمين؟",
+            reply_markup=markup,
+            protect_content=True
+        )
 
 @bot.message_handler(commands=["stats"])
 def stats(message):
@@ -116,38 +132,95 @@ def stats(message):
         count = users_col.count_documents({})
         bot.reply_to(message, f"👥 عدد المشتركين النشطين: `{count}`", parse_mode="HTML", protect_content=True)
 
-# --- الإذاعة الشاملة ---
+# --- الإذاعة الشاملة المحسّنة ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.reply_to_message and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]))
 def broadcast(message):
-    users = users_col.find()
+    users = list(users_col.find({}, {"user_id": 1}))
+    total_users = len(users)
     count = 0
     deleted_count = 0
     fail_count = 0
-    
-    target_message_id = message.reply_to_message.message_id
-    bot.send_message(ADMIN_ID, "⏳ جاري بدء الإذاعة...", protect_content=True)
+    error_logs = {}
 
-    for u in users:
+    target_message_id = message.reply_to_message.message_id
+    status_msg = bot.send_message(
+        ADMIN_ID,
+        f"⏳ جاري بدء الإذاعة إلى `{total_users}` مشترك...",
+        parse_mode="Markdown",
+        protect_content=True
+    )
+
+    for index, u in enumerate(users):
         target_id = u.get("user_id")
-        try:
-            bot.copy_message(chat_id=target_id, from_chat_id=ADMIN_ID, message_id=target_message_id, protect_content=True)
-            count += 1
-            time.sleep(0.05) 
-        except Exception as e:
-            error_message = str(e).lower()
-            if "blocked" in error_message or "deactivated" in error_message or "chat not found" in error_message:
-                users_col.delete_one({"user_id": target_id})
-                deleted_count += 1
-            else:
-                fail_count += 1
+        if not target_id:
+            users_col.delete_one({"_id": u["_id"]})
+            deleted_count += 1
             continue
-            
+
+        sent = False
+        while not sent:
+            try:
+                bot.copy_message(
+                    chat_id=target_id,
+                    from_chat_id=ADMIN_ID,
+                    message_id=target_message_id,
+                    protect_content=True
+                )
+                count += 1
+                sent = True
+                time.sleep(0.06)
+
+            except ApiTelegramException as e:
+                if e.error_code == 429:
+                    retry_after = int(e.result_json.get("parameters", {}).get("retry_after", 5))
+                    time.sleep(retry_after + 1)
+
+                elif e.error_code in [400, 403]:
+                    err_desc = e.description.lower()
+                    if any(x in err_desc for x in ["blocked", "deactivated", "chat not found", "can't initiate", "kicked"]):
+                        users_col.delete_one({"user_id": target_id})
+                        deleted_count += 1
+                    else:
+                        fail_count += 1
+                        error_logs[e.description] = error_logs.get(e.description, 0) + 1
+                    sent = True
+
+                else:
+                    fail_count += 1
+                    error_logs[e.description] = error_logs.get(e.description, 0) + 1
+                    sent = True
+
+            except Exception as e:
+                fail_count += 1
+                err_str = str(e)
+                error_logs[err_str] = error_logs.get(err_str, 0) + 1
+                sent = True
+
+        if (index + 1) % 300 == 0:
+            try:
+                bot.edit_message_text(
+                    f"⏳ جاري الإذاعة... ({index + 1}/{total_users})\n✅ نجح: `{count}` | 🗑️ حُذف: `{deleted_count}` | ❌ فشل: `{fail_count}`",
+                    chat_id=ADMIN_ID,
+                    message_id=status_msg.message_id,
+                    parse_mode="Markdown"
+                )
+            except:
+                pass
+
+    error_details = ""
+    if error_logs:
+        error_details = "\n\n🔍 **تفاصيل الأخطاء الأخرى:**\n"
+        for err_msg, err_num in list(error_logs.items())[:5]:
+            error_details += f"- `{err_msg}`: ({err_num})\n"
+
     bot.send_message(
-        ADMIN_ID, 
+        ADMIN_ID,
         f"📊 **تقرير الإذاعة والتحسين:**\n\n"
         f"✅ تم الإرسال بنجاح: `{count}`\n"
         f"🗑️ تم حذف المحظورين/الوهميين: `{deleted_count}`\n"
-        f"❌ أخطاء أخرى: `{fail_count}`",
+        f"❌ أخطاء أخرى: `{fail_count}`"
+        f"{error_details}",
+        parse_mode="Markdown",
         protect_content=True
     )
 
@@ -159,21 +232,21 @@ def handle_callbacks(call):
 
     if call.data == "check_share":
         bot.answer_callback_query(
-            call.id, 
-            "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲", 
+            call.id,
+            "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲",
             show_alert=True
         )
 
     elif call.data == "show_vip_info":
         now = datetime.now()
-        
+
         if user_id != ADMIN_ID:
             user = users_col.find_one({"user_id": user_id})
             if user and user.get("last_vip_request"):
                 if now - user.get("last_vip_request") < timedelta(hours=24):
                     bot.answer_callback_query(
-                        call.id, 
-                        "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.", 
+                        call.id,
+                        "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.",
                         show_alert=True
                     )
                     return
@@ -185,8 +258,8 @@ def handle_callbacks(call):
 
         try:
             bot.send_message(
-                chat_id, 
-                get_vip_text(), 
+                chat_id,
+                get_vip_text(),
                 parse_mode="HTML",
                 protect_content=True
             )
@@ -224,9 +297,9 @@ def send_admin_reply(message):
 
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
 def forward(message):
-    try: 
+    try:
         bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
-    except: 
+    except:
         pass
 
 if __name__ == "__main__":
