@@ -66,79 +66,41 @@ reply_targets = {}
 admin_states = {}   # لتعديل الإعدادات من داخل البوت
 bc_sessions = {}    # لإدارة جلسة الإذاعة المتقدمة
 
-# --- نظام تعدد اللغات (العبرية + الإنجليزية) ---
-def detect_lang(user_obj=None, user_id=None):
-    if user_obj and getattr(user_obj, "language_code", None):
-        lang = user_obj.language_code.lower()
-        return "he" if lang in ["he", "iw"] else "en"
-    if user_id:
-        u = users_col.find_one({"user_id": user_id}, {"lang": 1})
-        if u and u.get("lang"):
-            return u["lang"]
-    return "he"
-
-def get_texts(lang, first_name=""):
+# --- النصوص الأساسية باللغة العبرية ---
+def get_texts(first_name=""):
     price = get_setting("vip_price")
     stars_url = get_setting("vip_stars_url")
     alt_url = get_setting("alt_pay_url")
     share_link = get_setting("share_link")
+    share_text = f"התוכן המלא פתוח / ללא הגבלה🔥👇 {share_link}"
 
-    if lang == "he":
-        share_text = f"התוכן המלא פתוח / ללא הגבלה🔥👇 {share_link}"
-        return {
-            "welcome": (
-                f"<b>היי {first_name}! 👋🔥\n\n"
-                f"פתיחת הקבוצה נעולה (0/2 שיתופים) 🎁\n"
-                f"+50,000 סרטונים בלעדיים מחכים לך!</b>\n\n"
-                f"<blockquote>🚀 לחצו על \"שתף\" ושתפו את הקישור עם 2 חברים או קבוצות לפתיחה מיידית 👇</blockquote>"
-            ),
-            "btn_share": "🔗 שיתוף (0/2)",
-            "btn_verify": "📥 אימות פתיחה",
-            "btn_vip": "👑 פתיחה מהירה - VIP",
-            "share_url": f"https://t.me/share/url?url={urllib.parse.quote(share_text)}",
-            "share_alert": "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲",
-            "vip_already": "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.",
-            "vip_text": (
-                f"<blockquote><b>💎 פתיחת VIP ישירה (ללא שיתוף)</b></blockquote>\n"
-                f"<blockquote><b>🔥 גישה מלאה + קבוצות פרטיות לכל החיים!</b></blockquote>\n"
-                f"<blockquote><b>💰 מחיר כניסה: {price} כוכבים</b></blockquote>\n\n"
-                f"👇 בחרו את שיטת התשלום המועדפת עליכם:"
-            ),
-            "btn_pay_stars": f"⭐ תשלום {price} כוכבים (הודעה ישירה)",
-            "btn_pay_alt": "💳 תשלום בדרך אחרת (ללא כוכבים)",
-            "stars_url": stars_url,
-            "alt_url": alt_url
-        }
-    else:
-        share_text = f"Full exclusive content unlocked / Unlimited 🔥👇 {share_link}"
-        return {
-            "welcome": (
-                f"<b>Hey {first_name}! 👋🔥\n\n"
-                f"Group access is locked (0/2 shares) 🎁\n"
-                f"+50,000 exclusive videos are waiting for you!</b>\n\n"
-                f"<blockquote>🚀 Click \"Share\" and send the link to 2 friends or groups for instant unlock 👇</blockquote>"
-            ),
-            "btn_share": "🔗 Share (0/2)",
-            "btn_verify": "📥 Verify Unlock",
-            "btn_vip": "👑 Fast Unlock - VIP",
-            "share_url": f"https://t.me/share/url?url={urllib.parse.quote(share_text)}",
-            "share_alert": "⚠️ Sharing incomplete! Share the link with 2 friends to unlock the group 📲",
-            "vip_already": "⚠️ You already received the VIP details today! Try again tomorrow.",
-            "vip_text": (
-                f"<blockquote><b>💎 Direct VIP Unlock (No Sharing Required)</b></blockquote>\n"
-                f"<blockquote><b>🔥 Full Access + Private Lifetime Groups!</b></blockquote>\n"
-                f"<blockquote><b>💰 Entry Price: {price} Stars</b></blockquote>\n\n"
-                f"👇 Choose your preferred payment method:"
-            ),
-            "btn_pay_stars": f"⭐ Pay {price} Stars (Direct Message)",
-            "btn_pay_alt": "💳 Pay Another Way (Without Stars)",
-            "stars_url": stars_url,
-            "alt_url": alt_url
-        }
+    return {
+        "welcome": (
+            f"<b>היי {first_name}! 👋🔥\n\n"
+            f"פתיחת הקבוצה נעולה (0/2 שיתופים) 🎁\n"
+            f"+50,000 סרטונים בלעדיים מחכים לך!</b>\n\n"
+            f"<blockquote>🚀 לחצו על \"שתף\" ושתפו את הקישור עם 2 חברים או קבוצות לפתיחה מיידית 👇</blockquote>"
+        ),
+        "btn_share": "🔗 שיתוף (0/2)",
+        "btn_verify": "📥 אימות פתיחה",
+        "btn_vip": "👑 פתיחה מהירה - VIP",
+        "share_url": f"https://t.me/share/url?url={urllib.parse.quote(share_text)}",
+        "share_alert": "⚠️ השיתוף לא הושלם! שתף את הקישור עם 2 חברים כדי לפתוח את הקבוצה 📲",
+        "vip_already": "⚠️ כבר קיבלת את הפרטים היום! נסה שוב מחר.",
+        "vip_text": (
+            f"<blockquote><b>💎 פתיחת VIP ישירה (ללא שיתוף)</b></blockquote>\n"
+            f"<blockquote><b>🔥 גישה מלאה + קבוצות פרטיות לכל החיים!</b></blockquote>\n"
+            f"<blockquote><b>💰 מחיר כניסה: {price} כוכבים</b></blockquote>\n\n"
+            f"👇 בחרו את שיטת התשלום המועדפת עליכם:"
+        ),
+        "btn_pay_stars": f"⭐ תשלום {price} כוכבים (הודעה ישירה)",
+        "btn_pay_alt": "💳 תשלום בדרך אחרת (ללא כוכבים)",
+        "stars_url": stars_url,
+        "alt_url": alt_url
+    }
 
 # --- إرسال رسالة الترحيب ---
-def send_welcome_message(user_id, first_name, user_obj=None):
-    lang = detect_lang(user_obj=user_obj, user_id=user_id)
+def send_welcome_message(user_id, first_name):
     now = datetime.now()
 
     if user_id != ADMIN_ID:
@@ -151,8 +113,7 @@ def send_welcome_message(user_id, first_name, user_obj=None):
 
         update_fields = {
             "last_welcome": now,
-            "name": first_name,
-            "lang": lang
+            "name": first_name
         }
         if is_new:
             update_fields["joined_at"] = now
@@ -162,11 +123,10 @@ def send_welcome_message(user_id, first_name, user_obj=None):
         try:
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}"))
-            lang_flag = "🇮🇱 HE" if lang == "he" else "🇬🇧 EN"
             bot.send_message(
                 ADMIN_ID,
                 f"👤 **مشترك {'جديد' if is_new else 'عائد'}:** {first_name}\n"
-                f"🆔 ID: `{user_id}` | 🌐 اللغة: `{lang_flag}`",
+                f"🆔 ID: `{user_id}`",
                 reply_markup=markup,
                 parse_mode="Markdown",
                 protect_content=True
@@ -174,7 +134,7 @@ def send_welcome_message(user_id, first_name, user_obj=None):
         except:
             pass
 
-    t = get_texts(lang, first_name)
+    t = get_texts(first_name)
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton(t["btn_share"], url=t["share_url"]))
     markup.add(types.InlineKeyboardButton(t["btn_verify"], callback_data="check_share"))
@@ -195,11 +155,11 @@ def send_welcome_message(user_id, first_name, user_obj=None):
 # --- الأوامر الأساسية ---
 @bot.message_handler(commands=["start"])
 def start_cmd(message):
-    send_welcome_message(message.chat.id, message.from_user.first_name, message.from_user)
+    send_welcome_message(message.chat.id, message.from_user.first_name)
 
 @bot.chat_join_request_handler()
 def join_req(request):
-    send_welcome_message(request.from_user.id, request.from_user.first_name, request.from_user)
+    send_welcome_message(request.from_user.id, request.from_user.first_name)
 
 # --- لوحة تحكم الأدمن الشاملة (/admin) ---
 def get_admin_keyboard():
@@ -234,10 +194,10 @@ def admin_panel(message):
 def get_settings_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(f"🎬 رابط الفيديو الترحيبي", callback_data="set_video_url"),
-        types.InlineKeyboardButton(f"🔗 رابط المشاركة (القناة)", callback_data="set_share_link"),
-        types.InlineKeyboardButton(f"⭐ رابط الدفع بالنجوم", callback_data="set_vip_stars_url"),
-        types.InlineKeyboardButton(f"💳 رابط الدفع البديل", callback_data="set_alt_pay_url"),
+        types.InlineKeyboardButton("🎬 رابط الفيديو الترحيبي", callback_data="set_video_url"),
+        types.InlineKeyboardButton("🔗 رابط المشاركة (القناة)", callback_data="set_share_link"),
+        types.InlineKeyboardButton("⭐ رابط الدفع بالنجوم", callback_data="set_vip_stars_url"),
+        types.InlineKeyboardButton("💳 رابط الدفع البديل", callback_data="set_alt_pay_url"),
         types.InlineKeyboardButton(f"💰 سعر VIP بالنجوم (الحالي: {get_setting('vip_price')})", callback_data="set_vip_price"),
         types.InlineKeyboardButton("🔙 رجوع للوحة الرئيسية", callback_data="adm_home")
     )
@@ -281,7 +241,7 @@ def run_advanced_broadcast(bc_message_id, session):
     deleted_count = 0
     fail_count = 0
     error_logs = {}
-    sent_records = []  # لحفظ أرقام الرسائل في حال تفعيل الحذف التلقائي
+    sent_records = []
 
     reply_markup = None
     if session["btn_text"] and session["btn_url"]:
@@ -381,7 +341,6 @@ def run_advanced_broadcast(bc_message_id, session):
         protect_content=True
     )
 
-    # جدولة الحذف التلقائي إذا كان مفعلاً
     if session["auto_delete"] > 0 and sent_records:
         def schedule_deletion(records, delay):
             time.sleep(delay)
@@ -405,8 +364,7 @@ def run_advanced_broadcast(bc_message_id, session):
 def handle_callbacks(call):
     user_id = call.from_user.id
     chat_id = call.message.chat.id
-    lang = detect_lang(user_obj=call.from_user, user_id=user_id)
-    t = get_texts(lang)
+    t = get_texts()
 
     # 1. أزرار المستخدمين
     if call.data == "check_share":
@@ -416,7 +374,6 @@ def handle_callbacks(call):
         now = datetime.now()
         if user_id != ADMIN_ID:
             user = users_col.find_one({"user_id": user_id})
-            # تسجيل أن المستخدم مهتم بالـ VIP للاستهداف المستقبلي
             users_col.update_one({"user_id": user_id}, {"$set": {"clicked_vip": True, "last_vip_click": now}}, upsert=True)
 
             if user and user.get("last_vip_request"):
@@ -465,8 +422,6 @@ def handle_callbacks(call):
             total = users_col.count_documents({})
             new_24h = users_col.count_documents({"joined_at": {"$gte": now - timedelta(hours=24)}})
             vip_clicks = users_col.count_documents({"clicked_vip": True})
-            he_count = users_col.count_documents({"lang": "he"})
-            en_count = users_col.count_documents({"lang": "en"})
 
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_home"))
@@ -475,9 +430,7 @@ def handle_callbacks(call):
                 f"📊 **إحصائيات البوت التفصيلية:**\n\n"
                 f"👥 إجمالي المشتركين النشطين: `{total}`\n"
                 f"🆕 مشتركو آخر 24 ساعة: `{new_24h}`\n"
-                f"👑 مهتمون بالـ VIP (ضغطوا الزر): `{vip_clicks}`\n\n"
-                f"🌐 **توزيع اللغات:**\n"
-                f"🇮🇱 العبرية: `{he_count}` | 🇬🇧 الإنجليزية: `{en_count}`",
+                f"👑 مهتمون بالـ VIP (ضغطوا الزر): `{vip_clicks}`",
                 chat_id, call.message.message_id,
                 reply_markup=markup,
                 parse_mode="Markdown"
@@ -486,7 +439,6 @@ def handle_callbacks(call):
         elif call.data == "adm_backup":
             bot.answer_callback_query(call.id, "⏳ جاري تجهيز النسخة الاحتياطية...")
             all_users = list(users_col.find({}, {"_id": 0}))
-            # تحويل التواريخ إلى نصوص لتصدير JSON
             for u in all_users:
                 for k, v in u.items():
                     if isinstance(v, datetime):
@@ -518,7 +470,6 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id)
             bot.send_message(ADMIN_ID, f"✍️ أرسل الآن **{names.get(setting_key)}**:", parse_mode="Markdown")
 
-        # --- خطوات الإذاعة المتقدمة ---
         elif call.data == "adm_bc_start":
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(
@@ -605,7 +556,6 @@ def handle_callbacks(call):
 # --- معالجة رسائل الأدمن (الإعدادات، الإذاعة، والردود) ---
 @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID, content_types=['text', 'photo', 'video', 'animation', 'document', 'voice', 'audio'])
 def handle_admin_messages(message):
-    # 1. إذا كان الأدمن يعدّل أحد الإعدادات الحية
     if ADMIN_ID in admin_states and message.content_type == 'text':
         state = admin_states.pop(ADMIN_ID)
         key = state.replace("edit_", "")
@@ -613,7 +563,6 @@ def handle_admin_messages(message):
         bot.reply_to(message, "✅ تم تحديث الإعداد وحفظه في قاعدة البيانات بنجاح!", reply_markup=get_admin_keyboard())
         return
 
-    # 2. إذا كان الأدمن في جلسة إذاعة متقدمة
     if ADMIN_ID in bc_sessions:
         session = bc_sessions[ADMIN_ID]
         if session["step"] == "wait_btn" and message.content_type == 'text':
@@ -636,13 +585,11 @@ def handle_admin_messages(message):
             Thread(target=run_advanced_broadcast, args=(message.message_id, active_session), daemon=True).start()
             return
 
-    # 3. الإذاعة السريعة القديمة بالرد على رسالة (/bc أو إذاعة)
     if message.reply_to_message and message.content_type == 'text' and (message.text in ["/bc", "/broadcast", "إذاعة", "اذاعة"]):
         quick_session = {"segment": "all", "pin": False, "btn_text": None, "btn_url": None, "auto_delete": 0}
         Thread(target=run_advanced_broadcast, args=(message.reply_to_message.message_id, quick_session), daemon=True).start()
         return
 
-    # 4. الرد المباشر على مستخدم
     if ADMIN_ID in reply_targets:
         target_id = reply_targets.pop(ADMIN_ID)
         try:
