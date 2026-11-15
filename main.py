@@ -75,12 +75,13 @@ DEFAULT_SETTINGS = {
     "btn_pay_stars_text": "⭐ תשלום כוכבים (הודעה ישירה)",
     "btn_pay_alt_text": "💳 תשלום בדרך אחרת (ללא כוכבים)",
 
-    # 4. إظهار وإخفاء الأزرار
+    # 4. إظهار وإخفاء الأزرار + الأزرار المخصصة
     "show_btn_share": True,
     "show_btn_verify": True,
     "show_btn_vip": True,
     "show_btn_pay_stars": True,
     "show_btn_pay_alt": True,
+    "custom_buttons": [],  # [{"target": "welcome"|"vip", "text": "...", "url": "..."}]
 
     # 5. السلوك والتوقيت
     "cooldown_hours": 24,
@@ -300,6 +301,10 @@ def send_welcome_message(user_id, first_name):
     if get_setting("show_btn_vip"):
         markup.add(types.InlineKeyboardButton(t["btn_vip"], callback_data="show_vip_info"))
 
+    for cb in (get_setting("custom_buttons") or []):
+        if cb.get("target") == "welcome" and cb.get("text") and cb.get("url"):
+            markup.add(types.InlineKeyboardButton(cb["text"], url=cb["url"]))
+
     media_type = get_setting("media_type")
     media_file = get_setting("media_file")
     protect = bool(get_setting("protect_content"))
@@ -412,6 +417,7 @@ def get_texts_keyboard():
 
 def get_buttons_vis_keyboard():
     def ic(k): return "✅ ظاهر" if get_setting(k) else "❌ مخفي"
+    custom_cnt = len(get_setting("custom_buttons") or [])
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
         types.InlineKeyboardButton(f"زر المشاركة: {ic('show_btn_share')}", callback_data="tog_show_btn_share"),
@@ -419,6 +425,8 @@ def get_buttons_vis_keyboard():
         types.InlineKeyboardButton(f"زر فتح VIP: {ic('show_btn_vip')}", callback_data="tog_show_btn_vip"),
         types.InlineKeyboardButton(f"زر الدفع بالنجوم: {ic('show_btn_pay_stars')}", callback_data="tog_show_btn_pay_stars"),
         types.InlineKeyboardButton(f"زر الدفع البديل: {ic('show_btn_pay_alt')}", callback_data="tog_show_btn_pay_alt"),
+        types.InlineKeyboardButton("➕ إضافة زر رابط جديد", callback_data="cbtn_add_menu"),
+        types.InlineKeyboardButton(f"🗑️ حذف زر مخصص (الحالي: {custom_cnt})", callback_data="cbtn_del_menu"),
         types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_home")
     )
     return markup
@@ -743,6 +751,10 @@ def handle_callbacks(call):
         if get_setting("show_btn_pay_alt"):
             vip_markup.add(types.InlineKeyboardButton(t["btn_pay_alt"], url=t["alt_url"]))
 
+        for cb in (get_setting("custom_buttons") or []):
+            if cb.get("target") == "vip" and cb.get("text") and cb.get("url"):
+                vip_markup.add(types.InlineKeyboardButton(cb["text"], url=cb["url"]))
+
         try:
             bot.send_message(
                 chat_id,
@@ -803,7 +815,7 @@ def handle_callbacks(call):
         elif call.data == "adm_texts":
             bot.edit_message_text("📝 **تعديل النصوص الحية**\n(يدعم وسوم HTML مثل `<b>` و `<blockquote>`)", chat_id, call.message.message_id, reply_markup=get_texts_keyboard(), parse_mode="Markdown")
         elif call.data == "adm_buttons_vis":
-            bot.edit_message_text("👁️ **إظهار وإخفاء الأزرار**", chat_id, call.message.message_id, reply_markup=get_buttons_vis_keyboard(), parse_mode="Markdown")
+            bot.edit_message_text("👁️ **إدارة وإظهار/إخفاء الأزرار**", chat_id, call.message.message_id, reply_markup=get_buttons_vis_keyboard(), parse_mode="Markdown")
         elif call.data == "adm_fsub":
             bot.edit_message_text(
                 "🔒 **إعدادات الاشتراك الإجباري**\n"
@@ -818,6 +830,55 @@ def handle_callbacks(call):
             bot.edit_message_text("🛡️ **إعدادات الأمان والمشرفين**", chat_id, call.message.message_id, reply_markup=get_security_keyboard(), parse_mode="Markdown")
         elif call.data == "adm_data":
             bot.edit_message_text("💾 **إدارة البيانات والصيانة**", chat_id, call.message.message_id, reply_markup=get_data_keyboard(), parse_mode="Markdown")
+
+        # إدارة الأزرار المخصصة (إضافة / حذف)
+        elif call.data == "cbtn_add_menu":
+            m = types.InlineKeyboardMarkup(row_width=1)
+            m.add(
+                types.InlineKeyboardButton("👋 إضافة زر في رسالة الترحيب", callback_data="cbtn_target_welcome"),
+                types.InlineKeyboardButton("👑 إضافة زر في رسالة VIP", callback_data="cbtn_target_vip"),
+                types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_buttons_vis")
+            )
+            bot.edit_message_text("➕ **إضافة زر رابط مخصص**\nاختر الرسالة التي تريد إضافة الزر إليها:", chat_id, call.message.message_id, reply_markup=m, parse_mode="Markdown")
+
+        elif call.data in ["cbtn_target_welcome", "cbtn_target_vip"]:
+            target = "welcome" if call.data == "cbtn_target_welcome" else "vip"
+            admin_states[ADMIN_ID] = f"cbtn_add_{target}"
+            bot.answer_callback_query(call.id)
+            bot.send_message(
+                ADMIN_ID,
+                "🔗 أرسل **نص الزر والرابط** مفصولين بعلامة `|`\nمثال:\n`🎬 צפייה בדוגמאות | https://t.me/YourChannel`",
+                parse_mode="Markdown"
+            )
+
+        elif call.data == "cbtn_del_menu":
+            cbtns = get_setting("custom_buttons") or []
+            if not cbtns:
+                bot.answer_callback_query(call.id, "⚠️ لا توجد أزرار مخصصة مضافة حالياً.", show_alert=True)
+                return
+            m = types.InlineKeyboardMarkup(row_width=1)
+            for idx, cb in enumerate(cbtns):
+                loc = "الترحيب" if cb.get("target") == "welcome" else "VIP"
+                m.add(types.InlineKeyboardButton(f"🗑️ [{loc}] {cb.get('text')}", callback_data=f"cbtn_del_{idx}"))
+            m.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_buttons_vis"))
+            bot.edit_message_text("🗑️ **حذف زر مخصص**\nاضغط على الزر الذي تريد حذفه:", chat_id, call.message.message_id, reply_markup=m, parse_mode="Markdown")
+
+        elif call.data.startswith("cbtn_del_"):
+            idx = int(call.data.split("_")[-1])
+            cbtns = get_setting("custom_buttons") or []
+            if 0 <= idx < len(cbtns):
+                removed = cbtns.pop(idx)
+                update_setting("custom_buttons", cbtns)
+                bot.answer_callback_query(call.id, f"✅ تم حذف الزر: {removed.get('text')}")
+            if cbtns:
+                m = types.InlineKeyboardMarkup(row_width=1)
+                for i, cb in enumerate(cbtns):
+                    loc = "الترحيب" if cb.get("target") == "welcome" else "VIP"
+                    m.add(types.InlineKeyboardButton(f"🗑️ [{loc}] {cb.get('text')}", callback_data=f"cbtn_del_{i}"))
+                m.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_buttons_vis"))
+                bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=m)
+            else:
+                bot.edit_message_text("👁️ **إدارة وإظهار/إخفاء الأزرار**", chat_id, call.message.message_id, reply_markup=get_buttons_vis_keyboard(), parse_mode="Markdown")
 
         # التبديلات السريعة (Toggles)
         elif call.data.startswith("tog_"):
@@ -981,6 +1042,24 @@ def handle_admin_messages(message):
     # 1. معالجة حالات التعديل للأدمن الرئيسي
     if uid == ADMIN_ID and ADMIN_ID in admin_states:
         state = admin_states.pop(ADMIN_ID)
+
+        # إضافة زر مخصص جديد
+        if state in ["cbtn_add_welcome", "cbtn_add_vip"] and message.content_type == "text":
+            if "|" not in message.text:
+                admin_states[ADMIN_ID] = state
+                bot.reply_to(message, "⚠️ الصيغة غير صحيحة! استخدم علامة `|` بين نص الزر والرابط.\nمثال: `🎬 דוגמאות | https://t.me/YourChannel`", parse_mode="Markdown")
+                return
+            btn_text, btn_url = [x.strip() for x in message.text.split("|", 1)]
+            if not btn_text or not btn_url.startswith(("http://", "https://", "tg://")):
+                admin_states[ADMIN_ID] = state
+                bot.reply_to(message, "⚠️ تأكد من إدخال نص الزر ورابط صحيح يبدأ بـ `https://`", parse_mode="Markdown")
+                return
+            target = "welcome" if state == "cbtn_add_welcome" else "vip"
+            cbtns = get_setting("custom_buttons") or []
+            cbtns.append({"target": target, "text": btn_text, "url": btn_url})
+            update_setting("custom_buttons", cbtns)
+            bot.reply_to(message, f"✅ تمت إضافة الزر **{btn_text}** بنجاح!", parse_mode="Markdown", reply_markup=get_buttons_vis_keyboard())
+            return
 
         # رفع وسائط مباشرة للترحيب
         if state == "edit_media_file":
