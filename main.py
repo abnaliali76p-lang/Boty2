@@ -103,10 +103,10 @@ DEFAULT_SETTINGS = {
     "sub_admins": [],
     "bc_sleep": 0.06,
     "bc_footer": "",
-    "paused_bots": []  # قائمة أسماء البوتات المتوقفة مؤقتاً
+    "paused_bots": []
 }
 
-# --- المفاتيح المستقلة لكل بوت (نصوص + روابط + وسائط) ---
+# --- المفاتيح المستقلة لكل بوت (نصوص + روابط + أزرار + وسائط) ---
 PER_BOT_KEYS = [
     "welcome_text", "vip_text", "btn_share_text", "btn_verify_text",
     "btn_vip_text", "btn_pay_stars_text", "btn_pay_alt_text",
@@ -133,6 +133,10 @@ def get_setting(key, bot_uname=None):
         custom_key = f"{key}_{bot_uname}"
         if custom_key in _SETTINGS_CACHE and _SETTINGS_CACHE[custom_key] is not None:
             return _SETTINGS_CACHE[custom_key]
+        doc = settings_col.find_one({"_id": "bot_config"}, {custom_key: 1})
+        if doc and doc.get(custom_key) is not None:
+            _SETTINGS_CACHE[custom_key] = doc[custom_key]
+            return doc[custom_key]
     return _SETTINGS_CACHE.get(key, DEFAULT_SETTINGS.get(key))
 
 def update_setting(key, value, bot_uname=None):
@@ -153,10 +157,10 @@ def toggle_bot_pause(bot_uname):
     paused = list(get_setting("paused_bots") or [])
     if bot_uname in paused:
         paused.remove(bot_uname)
-        status = True  # أصبح يعمل
+        status = True
     else:
         paused.append(bot_uname)
-        status = False  # أصبح متوقفاً
+        status = False
     update_setting("paused_bots", paused)
     return status
 
@@ -180,7 +184,6 @@ def log_metric(metric_name, inc=1):
 
 # --- غرفة العمليات المركزية: إرسال إشعارات الأدمن عبر البوت الأساسي أو أول بوت متاح ---
 def notify_admin_central(text, reply_markup=None, parse_mode="Markdown", fallback_bot=None):
-    # الأولوية للبوت الأساسي إذا كان شغالاً، وإلا أول بوت نشط، وإلا البوت الذي حدث فيه الحدث
     hub_bot = None
     if PRIMARY_BOT_USERNAME and PRIMARY_BOT_USERNAME in active_bot_instances:
         hub_bot = active_bot_instances[PRIMARY_BOT_USERNAME]
@@ -321,7 +324,6 @@ def register_bot_handlers(bot_instance, bot_uname):
         if is_banned(user_id):
             return
 
-        # فحص الإيقاف المؤقت للبوت أو وضع الصيانة العام
         if (is_bot_paused(bot_uname) or get_setting("maintenance_mode")) and not is_admin_or_sub(user_id):
             try:
                 bot_instance.send_message(user_id, get_setting("maintenance_text"), parse_mode="HTML")
@@ -358,8 +360,8 @@ def register_bot_handlers(bot_instance, bot_uname):
             if notify_mode == "all" or (notify_mode == "new_only" and is_new):
                 markup = types.InlineKeyboardMarkup(row_width=2)
                 markup.add(
-                    types.InlineKeyboardButton("📩 رد", callback_data=f"reply_{user_id}_{bot_uname}"),
-                    types.InlineKeyboardButton("🚫 حظر", callback_data=f"quickban_{user_id}")
+                    types.InlineKeyboardButton("📩 رد", callback_data=f"reply|{user_id}|{bot_uname}"),
+                    types.InlineKeyboardButton("🚫 حظر", callback_data=f"quickban|{user_id}")
                 )
                 src_txt = f"\n🔗 المصدر: `{source_tag}`" if (is_new and source_tag) else ""
                 notify_admin_central(
@@ -466,17 +468,15 @@ def register_bot_handlers(bot_instance, bot_uname):
         markup = types.InlineKeyboardMarkup(row_width=1)
         markup.add(types.InlineKeyboardButton("➕ إضافة توكن بوت احتياطي جديد", callback_data="clone_add"))
 
-        # 1. البوت الأساسي
         if PRIMARY_BOT_USERNAME:
             p_paused = is_bot_paused(PRIMARY_BOT_USERNAME)
             p_online = PRIMARY_BOT_USERNAME in active_bot_instances
             p_status = "🔴 متوقف" if p_paused else ("🟢 يعمل" if p_online else "⚠️ غير متصل")
             markup.add(types.InlineKeyboardButton(
                 f"👑 [الأساسي] @{PRIMARY_BOT_USERNAME} ({p_status}) - تحكم",
-                callback_data=f"botmanage_{PRIMARY_BOT_USERNAME}"
+                callback_data=f"botmanage|{PRIMARY_BOT_USERNAME}"
             ))
 
-        # 2. البوتات الاحتياطية من القاعدة
         for c in clones_col.find({}):
             uname = c.get("username", "Unknown")
             c_paused = is_bot_paused(uname)
@@ -484,7 +484,7 @@ def register_bot_handlers(bot_instance, bot_uname):
             c_status = "🔴 متوقف" if c_paused else ("🟢 يعمل" if c_online else "⛔ محظور/مفصول")
             markup.add(types.InlineKeyboardButton(
                 f"🤖 [احتياطي] @{uname} ({c_status}) - تحكم",
-                callback_data=f"botmanage_{uname}"
+                callback_data=f"botmanage|{uname}"
             ))
 
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_home"))
@@ -495,15 +495,22 @@ def register_bot_handlers(bot_instance, bot_uname):
         tog_btn_text = "▶️ تشغيل البوت الآن" if paused else "⏸️ إيقاف البوت مؤقتاً"
         markup = types.InlineKeyboardMarkup(row_width=1)
         markup.add(
-            types.InlineKeyboardButton(tog_btn_text, callback_data=f"bottog_{target_uname}"),
-            types.InlineKeyboardButton("📝 تعديل نص الترحيب لهذا البوت", callback_data=f"rem_welcome_text_{target_uname}"),
-            types.InlineKeyboardButton("💎 تعديل نص VIP لهذا البوت", callback_data=f"rem_vip_text_{target_uname}"),
-            types.InlineKeyboardButton("🔗 تعديل رابط المشاركة لهذا البوت", callback_data=f"rem_share_link_{target_uname}"),
-            types.InlineKeyboardButton("🎬 تعديل وسائط الترحيب لهذا البوت", callback_data=f"rem_media_file_{target_uname}"),
-            types.InlineKeyboardButton("🔄 استعادة الإعدادات العامة لهذا البوت", callback_data=f"remreset_{target_uname}")
+            types.InlineKeyboardButton(tog_btn_text, callback_data=f"bottog|{target_uname}"),
+            types.InlineKeyboardButton("📝 نص الترحيب", callback_data=f"rem|welcome_text|{target_uname}"),
+            types.InlineKeyboardButton("💎 نص رسالة VIP", callback_data=f"rem|vip_text|{target_uname}"),
+            types.InlineKeyboardButton("🎬 رابط وسائط الترحيب (URL)", callback_data=f"rem|media_file|{target_uname}"),
+            types.InlineKeyboardButton("🔗 رابط المشاركة (القناة)", callback_data=f"rem|share_link|{target_uname}"),
+            types.InlineKeyboardButton("⭐ رابط الدفع بالنجوم", callback_data=f"rem|vip_stars_url|{target_uname}"),
+            types.InlineKeyboardButton("💳 رابط الدفع البديل", callback_data=f"rem|alt_pay_url|{target_uname}"),
+            types.InlineKeyboardButton("📤 اسم زر المشاركة", callback_data=f"rem|btn_share_text|{target_uname}"),
+            types.InlineKeyboardButton("🔓 اسم زر التحقق", callback_data=f"rem|btn_verify_text|{target_uname}"),
+            types.InlineKeyboardButton("👑 اسم زر فتح VIP", callback_data=f"rem|btn_vip_text|{target_uname}"),
+            types.InlineKeyboardButton("💫 اسم زر الدفع بالنجوم", callback_data=f"rem|btn_pay_stars_text|{target_uname}"),
+            types.InlineKeyboardButton("💳 اسم زر الدفع البديل", callback_data=f"rem|btn_pay_alt_text|{target_uname}"),
+            types.InlineKeyboardButton("🔄 استعادة الإعدادات العامة لهذا البوت", callback_data=f"remreset|{target_uname}")
         )
         if target_uname != PRIMARY_BOT_USERNAME:
-            markup.add(types.InlineKeyboardButton("🗑️ حذف البوت نهائياً من القاعدة", callback_data=f"clone_del_{target_uname}"))
+            markup.add(types.InlineKeyboardButton("🗑️ حذف البوت نهائياً من القاعدة", callback_data=f"clone_del|{target_uname}"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع لإدارة البوتات", callback_data="adm_bots_hub"))
         return markup
 
@@ -717,7 +724,6 @@ def register_bot_handlers(bot_instance, bot_uname):
                         retry_after = int(e.result_json.get("parameters", {}).get("retry_after", 5))
                         time.sleep(retry_after + 1)
                     elif e.error_code in [400, 403]:
-                        # يحذف السجل فقط إذا كان المستخدم مسجلاً على نفس البوت الذي يرسل الإذاعة
                         if u.get("last_bot") in [None, bot_uname]:
                             users_col.delete_one({"user_id": target_id})
                             deleted_count += 1
@@ -828,7 +834,7 @@ def register_bot_handlers(bot_instance, bot_uname):
 
                 if get_setting("notify_vip_click"):
                     m = types.InlineKeyboardMarkup()
-                    m.add(types.InlineKeyboardButton("📩 راسله الآن", callback_data=f"reply_{user_id}_{bot_uname}"))
+                    m.add(types.InlineKeyboardButton("📩 راسله الآن", callback_data=f"reply|{user_id}|{bot_uname}"))
                     notify_admin_central(
                         f"👑 **اهتمام VIP جديد!** | عبر: @{bot_uname}\n"
                         f"👤 المستخدم: {call.from_user.first_name} (`{user_id}`)",
@@ -864,17 +870,16 @@ def register_bot_handlers(bot_instance, bot_uname):
             if not is_admin_or_sub(user_id):
                 users_col.update_one({"user_id": user_id}, {"$set": {"last_vip_request": now}}, upsert=True)
 
-        # الرد الذكي العابر للبوتات
-        elif is_admin_or_sub(user_id) and call.data.startswith("reply_"):
-            parts = call.data.split("_", 2)
+        elif is_admin_or_sub(user_id) and call.data.startswith("reply|"):
+            parts = call.data.split("|", 2)
             target_id = parts[1]
             via_bot = parts[2] if len(parts) > 2 else bot_uname
             set_state(user_id, "reply_user", {"target_id": target_id, "via_bot": via_bot})
             bot_instance.answer_callback_query(call.id, "✅ أرسل الرد الآن")
             bot_instance.send_message(user_id, f"✍️ اكتب الرد للمستخدم `{target_id}` (سيُرسل عبر @{via_bot}):", parse_mode="Markdown")
 
-        elif user_id == ADMIN_ID and call.data.startswith("quickban_"):
-            target_id = int(call.data.split("_")[1])
+        elif user_id == ADMIN_ID and call.data.startswith("quickban|"):
+            target_id = int(call.data.split("|")[1])
             banned = get_setting("banned_users") or []
             if target_id not in banned:
                 banned.append(target_id)
@@ -898,12 +903,10 @@ def register_bot_handlers(bot_instance, bot_uname):
                 new_24h = users_col.count_documents({"joined_at": {"$gte": now - timedelta(hours=24)}})
                 vip_clicks = users_col.count_documents({"clicked_vip": True})
 
-                # توزيع المشتركين على البوتات
                 bot_pipe = [{"$group": {"_id": "$last_bot", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}]
                 bot_stats = list(users_col.aggregate(bot_pipe))
                 bot_lines = "\n".join([f"  • @{b['_id'] or 'غير محدد'}: `{b['count']}`" for b in bot_stats])
 
-                # أعلى مصادر الزيارات
                 src_pipe = [{"$group": {"_id": "$source_tag", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}, {"$limit": 5}]
                 sources = list(users_col.aggregate(src_pipe))
                 src_lines = "\n".join([f"  • `{s['_id'] or 'direct'}`: `{s['count']}`" for s in sources])
@@ -921,16 +924,16 @@ def register_bot_handlers(bot_instance, bot_uname):
                     chat_id, call.message.message_id, reply_markup=markup, parse_mode="Markdown"
                 )
 
-            # --- إدارة البوتات عن بُعد (تشغيل / إيقاف / تخصيص) ---
+            # --- إدارة البوتات عن بُعد (تشغيل / إيقاف / تخصيص / حذف) ---
             elif call.data == "adm_bots_hub":
                 bot_instance.edit_message_text(
                     "🤖 **مركز التحكم بالبوتات السحابية**\n"
-                    "اختر أي بوت لتشغيله، إيقافه مؤقتاً، أو تعديل نصوصه وروابطه عن بُعد:",
+                    "اختر أي بوت لتشغيله، إيقافه مؤقتاً، أو تعديل نصوصه وأزراره وروابطه عن بُعد:",
                     chat_id, call.message.message_id, reply_markup=get_bots_hub_keyboard(), parse_mode="Markdown"
                 )
 
-            elif call.data.startswith("botmanage_"):
-                target_uname = call.data.replace("botmanage_", "")
+            elif call.data.startswith("botmanage|"):
+                target_uname = call.data.split("|", 1)[1]
                 paused = is_bot_paused(target_uname)
                 online = target_uname in active_bot_instances
                 st_str = "🔴 متوقف مؤقتاً" if paused else ("🟢 يعمل الآن" if online else "⛔ غير متصل / محظور")
@@ -942,8 +945,8 @@ def register_bot_handlers(bot_instance, bot_uname):
                     parse_mode="Markdown"
                 )
 
-            elif call.data.startswith("bottog_"):
-                target_uname = call.data.replace("bottog_", "")
+            elif call.data.startswith("bottog|"):
+                target_uname = call.data.split("|", 1)[1]
                 now_running = toggle_bot_pause(target_uname)
                 msg_alert = f"▶️ تم تشغيل @{target_uname} بنجاح!" if now_running else f"⏸️ تم إيقاف @{target_uname} مؤقتاً!"
                 bot_instance.answer_callback_query(call.id, msg_alert, show_alert=True)
@@ -956,23 +959,18 @@ def register_bot_handlers(bot_instance, bot_uname):
                     parse_mode="Markdown"
                 )
 
-            elif call.data.startswith("rem_"):
-                # الصيغة: rem_<key>_<target_uname>
-                rest = call.data[4:]
-                for k in PER_BOT_KEYS:
-                    if rest.startswith(k + "_"):
-                        target_uname = rest[len(k) + 1:]
-                        set_state(ADMIN_ID, "remote_edit", {"key": k, "target_bot": target_uname})
-                        bot_instance.answer_callback_query(call.id)
-                        bot_instance.send_message(
-                            ADMIN_ID,
-                            f"✍️ أرسل القيمة الجديدة لـ `{k}` الخاصة بالبوت **@{target_uname}**:",
-                            parse_mode="Markdown"
-                        )
-                        break
+            elif call.data.startswith("rem|"):
+                _, k, target_uname = call.data.split("|", 2)
+                set_state(ADMIN_ID, "remote_edit", {"key": k, "target_bot": target_uname})
+                bot_instance.answer_callback_query(call.id)
+                bot_instance.send_message(
+                    ADMIN_ID,
+                    f"✍️ أرسل القيمة الجديدة لـ `{k}` الخاصة بالبوت **@{target_uname}**:",
+                    parse_mode="Markdown"
+                )
 
-            elif call.data.startswith("remreset_"):
-                target_uname = call.data.replace("remreset_", "")
+            elif call.data.startswith("remreset|"):
+                target_uname = call.data.split("|", 1)[1]
                 reset_bot_custom_config(target_uname)
                 bot_instance.answer_callback_query(call.id, f"✅ تمت استعادة إعدادات @{target_uname} العامة!", show_alert=True)
 
@@ -981,8 +979,8 @@ def register_bot_handlers(bot_instance, bot_uname):
                 bot_instance.answer_callback_query(call.id)
                 bot_instance.send_message(ADMIN_ID, "🤖 أرسل الآن **توكن البوت الجديد (Bot Token)** من @BotFather لتشغيله فوراً:")
 
-            elif call.data.startswith("clone_del_"):
-                uname = call.data.replace("clone_del_", "")
+            elif call.data.startswith("clone_del|"):
+                uname = call.data.split("|", 1)[1]
                 clones_col.delete_one({"username": uname})
                 reset_bot_custom_config(uname)
                 bot_instance.answer_callback_query(call.id, f"🗑️ تم حذف @{uname} نهائياً.", show_alert=True)
@@ -1347,7 +1345,6 @@ def register_bot_handlers(bot_instance, bot_uname):
                             protect_content=bool(get_setting("protect_content"))
                         )
                     else:
-                        # تمرير الرسالة للبوت الآخر ليرسلها هو للعميل
                         if message.content_type == "text":
                             sender_instance.send_message(target_id, message.html_text, parse_mode="HTML", protect_content=bool(get_setting("protect_content")))
                         else:
@@ -1365,7 +1362,7 @@ def register_bot_handlers(bot_instance, bot_uname):
             quick_session = {"segment": "all", "pin": False, "btn_text": None, "btn_url": None, "auto_delete": 0}
             Thread(target=run_advanced_broadcast, args=(message.reply_to_message.message_id, quick_session), daemon=True).start()
 
-    # --- توجيه رسائل الدعم من المستخدمين إلى غرفة العمليات المركزية ---
+    # --- توجيه رسائل المستخدمين العاديين مباشرة إلى البوت الأساسي ---
     @bot_instance.message_handler(func=lambda message: not is_admin_or_sub(message.chat.id), content_types=["text", "photo", "video", "animation", "document", "voice", "audio"])
     def forward_user_msg(message):
         uid = message.chat.id
@@ -1382,26 +1379,21 @@ def register_bot_handlers(bot_instance, bot_uname):
             try: bot_instance.reply_to(message, get_setting("auto_reply_text"), parse_mode="HTML", protect_content=bool(get_setting("protect_content")))
             except: pass
 
-        # إرسال تنبيه مع زر رد مباشر في البوت الأساسي
-        markup = types.InlineKeyboardMarkup(row_width=2)
-        markup.add(
-            types.InlineKeyboardButton("📩 رد", callback_data=f"reply_{uid}_{bot_uname}"),
-            types.InlineKeyboardButton("🚫 حظر", callback_data=f"quickban_{uid}")
-        )
-        msg_preview = message.text if message.content_type == "text" else f"[{message.content_type.upper()}]"
-        notify_admin_central(
-            f"💬 **رسالة دعم جديدة** | عبر: @{bot_uname}\n"
-            f"👤 من: {message.from_user.first_name} (`{uid}`)\n"
-            f"📝 المحتوى: {msg_preview}",
-            reply_markup=markup,
-            fallback_bot=bot_instance
-        )
-        # إذا كان هناك وسائط مرفقة، نوجّهها أيضاً في نفس البوت
-        if message.content_type != "text":
-            try:
+        hub_bot = active_bot_instances.get(PRIMARY_BOT_USERNAME) or (next(iter(active_bot_instances.values())) if active_bot_instances else bot_instance)
+        try:
+            if hub_bot == bot_instance:
                 bot_instance.forward_message(ADMIN_ID, uid, message.message_id)
-            except:
-                pass
+            else:
+                msg_content = message.text if message.content_type == "text" else f"[{message.content_type.upper()}]"
+                hub_bot.send_message(
+                    ADMIN_ID,
+                    f"📩 **رسالة من مستخدم** (@{bot_uname})\n👤 {message.from_user.first_name} (`{uid}`):\n\n{msg_content}",
+                    parse_mode="Markdown"
+                )
+                if message.content_type != "text":
+                    bot_instance.forward_message(ADMIN_ID, uid, message.message_id)
+        except:
+            pass
 
 # --- حلقة التشغيل المستقلة والمحمية لكل بوت مع تنبيه الطوارئ ---
 def launch_bot_polling(token_str, is_primary=False):
@@ -1436,19 +1428,15 @@ def launch_bot_polling(token_str, is_primary=False):
             time.sleep(5)
 
 if __name__ == "__main__":
-    # 1. تشغيل خادم الويب والمراقبة
     Thread(target=run_web, daemon=True).start()
 
-    # 2. تشغيل البوت الأساسي في خيط مستقل ومحصّن
     if TOKEN:
         Thread(target=launch_bot_polling, args=(TOKEN, True), daemon=True).start()
 
-    # 3. تشغيل جميع البوتات الاحتياطية من MongoDB في خيوط مستقلة
     for clone in clones_col.find({}):
         c_token = clone.get("token")
         if c_token and c_token != TOKEN:
             Thread(target=launch_bot_polling, args=(c_token, False), daemon=True).start()
 
-    # 4. إبقاء السيرفر حياً باستمرار لحماية البوتات الاحتياطية عند تعطل الأساسي
     while True:
         time.sleep(60)
