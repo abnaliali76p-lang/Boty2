@@ -130,7 +130,8 @@ reload_settings_cache()
 
 def get_setting(key, bot_uname=None):
     if bot_uname:
-        custom_key = f"{key}_{bot_uname}"
+        clean_uname = str(bot_uname).lower().lstrip("@")
+        custom_key = f"{key}_{clean_uname}"
         if custom_key in _SETTINGS_CACHE and _SETTINGS_CACHE[custom_key] is not None:
             return _SETTINGS_CACHE[custom_key]
         doc = settings_col.find_one({"_id": "bot_config"}, {custom_key: 1})
@@ -140,12 +141,14 @@ def get_setting(key, bot_uname=None):
     return _SETTINGS_CACHE.get(key, DEFAULT_SETTINGS.get(key))
 
 def update_setting(key, value, bot_uname=None):
-    target_key = f"{key}_{bot_uname}" if bot_uname else key
+    clean_uname = str(bot_uname).lower().lstrip("@") if bot_uname else None
+    target_key = f"{key}_{clean_uname}" if clean_uname else key
     _SETTINGS_CACHE[target_key] = value
     settings_col.update_one({"_id": "bot_config"}, {"$set": {target_key: value}}, upsert=True)
 
 def reset_bot_custom_config(bot_uname):
-    unset_fields = {f"{k}_{bot_uname}": "" for k in PER_BOT_KEYS}
+    clean_uname = str(bot_uname).lower().lstrip("@")
+    unset_fields = {f"{k}_{clean_uname}": "" for k in PER_BOT_KEYS}
     for k in unset_fields:
         _SETTINGS_CACHE.pop(k, None)
     settings_col.update_one({"_id": "bot_config"}, {"$unset": unset_fields})
@@ -216,52 +219,59 @@ def notify_admin_central(text, reply_markup=None, parse_mode="Markdown", fallbac
             except:
                 pass
 
+# --- استخراج تنسيقات تيليجرام والإيموجيات بأمان تام ---
 def extract_html_with_custom_emojis(message):
-    text = message.text or ""
-    entities = message.entities or []
-    if not entities:
-        return message.html_text.strip()
+    try:
+        entities = message.entities or []
+        has_custom_emoji = any(e.type == "custom_emoji" for e in entities)
+        if not has_custom_emoji:
+            return (message.html_text or message.text or "").strip()
 
-    utf16_text = text.encode("utf-16-le")
-    chars = [utf16_text[i:i+2].decode("utf-16-le") for i in range(0, len(utf16_text), 2)]
-    insertions = {}
-    for ent in entities:
-        start, end = ent.offset, ent.offset + ent.length
-        open_tag, close_tag = "", ""
-        if ent.type == "custom_emoji":
-            open_tag, close_tag = f'<tg-emoji emoji-id="{ent.custom_emoji_id}">', "</tg-emoji>"
-        elif ent.type == "bold":
-            open_tag, close_tag = "<b>", "</b>"
-        elif ent.type == "italic":
-            open_tag, close_tag = "<i>", "</i>"
-        elif ent.type == "underline":
-            open_tag, close_tag = "<u>", "</u>"
-        elif ent.type == "strikethrough":
-            open_tag, close_tag = "<s>", "</s>"
-        elif ent.type == "code":
-            open_tag, close_tag = "<code>", "</code>"
-        elif ent.type == "pre":
-            open_tag, close_tag = "<pre>", "</pre>"
-        elif ent.type == "spoiler":
-            open_tag, close_tag = '<span class="tg-spoiler">', "</span>"
-        elif ent.type == "blockquote":
-            open_tag, close_tag = "<blockquote>", "</blockquote>"
-        elif ent.type == "expandable_blockquote":
-            open_tag, close_tag = "<blockquote expandable>", "</blockquote>"
-        elif ent.type == "text_link":
-            open_tag, close_tag = f'<a href="{ent.url}">', "</a>"
+        text = message.text or ""
+        utf16_bytes = text.encode("utf-16-le")
+        total_units = len(utf16_bytes) // 2
 
-        if open_tag:
-            insertions.setdefault(start, []).append(open_tag)
-            insertions.setdefault(end, []).insert(0, close_tag)
+        insertions = {}
+        for ent in entities:
+            start, end = ent.offset, ent.offset + ent.length
+            open_tag, close_tag = "", ""
+            if ent.type == "custom_emoji":
+                open_tag, close_tag = f'<tg-emoji emoji-id="{ent.custom_emoji_id}">', "</tg-emoji>"
+            elif ent.type == "bold":
+                open_tag, close_tag = "<b>", "</b>"
+            elif ent.type == "italic":
+                open_tag, close_tag = "<i>", "</i>"
+            elif ent.type == "underline":
+                open_tag, close_tag = "<u>", "</u>"
+            elif ent.type == "strikethrough":
+                open_tag, close_tag = "<s>", "</s>"
+            elif ent.type == "code":
+                open_tag, close_tag = "<code>", "</code>"
+            elif ent.type == "pre":
+                open_tag, close_tag = "<pre>", "</pre>"
+            elif ent.type == "spoiler":
+                open_tag, close_tag = '<span class="tg-spoiler">', "</span>"
+            elif ent.type == "blockquote":
+                open_tag, close_tag = "<blockquote>", "</blockquote>"
+            elif ent.type == "expandable_blockquote":
+                open_tag, close_tag = "<blockquote expandable>", "</blockquote>"
+            elif ent.type == "text_link":
+                open_tag, close_tag = f'<a href="{ent.url}">', "</a>"
 
-    result = []
-    for idx in range(len(chars) + 1):
-        if idx in insertions:
-            result.extend(insertions[idx])
-        if idx < len(chars):
-            result.append(chars[idx])
-    return "".join(result).strip()
+            if open_tag:
+                insertions.setdefault(start, []).append(open_tag)
+                insertions.setdefault(end, []).insert(0, close_tag)
+
+        out_bytes = bytearray()
+        for idx in range(total_units + 1):
+            if idx in insertions:
+                out_bytes.extend("".join(insertions[idx]).encode("utf-16-le"))
+            if idx < total_units:
+                out_bytes.extend(utf16_bytes[idx*2 : idx*2 + 2])
+
+        return out_bytes.decode("utf-16-le").strip()
+    except Exception:
+        return (message.html_text or message.text or "").strip()
 
 def is_admin_or_sub(user_id):
     return user_id == ADMIN_ID or user_id in (get_setting("sub_admins") or [])
