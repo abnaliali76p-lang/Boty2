@@ -39,6 +39,7 @@ settings_col = db["settings"]
 states_col = db["admin_states"]
 clones_col = db["bot_clones"]
 analytics_col = db["analytics"]
+channels_col = db["admin_channels"]
 
 try:
     client.admin.command("ping")
@@ -48,6 +49,9 @@ try:
         IndexModel([("clicked_vip", ASCENDING)]),
         IndexModel([("source_tag", ASCENDING)]),
         IndexModel([("last_bot", ASCENDING)])
+    ])
+    channels_col.create_indexes([
+        IndexModel([("chat_id", ASCENDING), ("bot_uname", ASCENDING)], unique=True)
     ])
     print("✅ تم الاتصال بـ MongoDB وتهيئة الفهارس بنجاح!")
 except Exception as e:
@@ -412,6 +416,25 @@ def register_bot_handlers(bot_instance, bot_uname):
         except Exception as e:
             print(f"Error sending welcome via @{bot_uname}: {e}")
 
+    # --- الالتقاط التلقائي للقنوات عند رفع أو إزالة البوت كمشرف ---
+    @bot_instance.my_chat_member_handler()
+    def track_bot_channels(update):
+        chat = update.chat
+        new_status = update.new_chat_member.status
+        if chat.type == "channel":
+            if new_status == "administrator":
+                channels_col.update_one(
+                    {"chat_id": chat.id, "bot_uname": bot_uname},
+                    {"$set": {
+                        "title": chat.title or "قناة بدون اسم",
+                        "username": chat.username,
+                        "added_at": datetime.now()
+                    }},
+                    upsert=True
+                )
+            elif new_status in ["left", "kicked", "member", "restricted"]:
+                channels_col.delete_one({"chat_id": chat.id, "bot_uname": bot_uname})
+
     @bot_instance.message_handler(commands=["start"])
     def start_cmd(message):
         parts = message.text.split(maxsplit=1)
@@ -434,26 +457,29 @@ def register_bot_handlers(bot_instance, bot_uname):
         markup = types.InlineKeyboardMarkup(row_width=2)
         markup.add(
             types.InlineKeyboardButton("📊 الإحصائيات والمصادر", callback_data="adm_stats"),
-            types.InlineKeyboardButton("📢 إذاعة متقدمة", callback_data="adm_bc_start")
+            types.InlineKeyboardButton("📢 إذاعة للمشتركين", callback_data="adm_bc_start")
         )
         markup.add(
-            types.InlineKeyboardButton("🤖 إدارة البوتات والتحكم", callback_data="adm_bots_hub"),
-            types.InlineKeyboardButton("🎬 المحتوى والوسائط", callback_data="adm_media")
+            types.InlineKeyboardButton("📣 إذاعة للقنوات", callback_data="adm_ch_hub"),
+            types.InlineKeyboardButton("🤖 إدارة البوتات والتحكم", callback_data="adm_bots_hub")
         )
         markup.add(
-            types.InlineKeyboardButton("⚙️ الروابط والأسعار", callback_data="adm_settings"),
-            types.InlineKeyboardButton("📝 تعديل النصوص", callback_data="adm_texts")
+            types.InlineKeyboardButton("🎬 المحتوى والوسائط", callback_data="adm_media"),
+            types.InlineKeyboardButton("⚙️ الروابط والأسعار", callback_data="adm_settings")
         )
         markup.add(
-            types.InlineKeyboardButton("👁️ إظهار/إخفاء الأزرار", callback_data="adm_buttons_vis"),
-            types.InlineKeyboardButton("🔒 الاشتراك الإجباري", callback_data="adm_fsub")
+            types.InlineKeyboardButton("📝 تعديل النصوص", callback_data="adm_texts"),
+            types.InlineKeyboardButton("👁️ إظهار/إخفاء الأزرار", callback_data="adm_buttons_vis")
         )
         markup.add(
-            types.InlineKeyboardButton("⏱️ التوقيت والسلوك", callback_data="adm_behavior"),
-            types.InlineKeyboardButton("🔔 الإشعارات والرد الآلي", callback_data="adm_notify")
+            types.InlineKeyboardButton("🔒 الاشتراك الإجباري", callback_data="adm_fsub"),
+            types.InlineKeyboardButton("⏱️ التوقيت والسلوك", callback_data="adm_behavior")
         )
         markup.add(
-            types.InlineKeyboardButton("🛡️ الأمان والمشرفون", callback_data="adm_security"),
+            types.InlineKeyboardButton("🔔 الإشعارات والرد الآلي", callback_data="adm_notify"),
+            types.InlineKeyboardButton("🛡️ الأمان والمشرفون", callback_data="adm_security")
+        )
+        markup.add(
             types.InlineKeyboardButton("💾 البيانات والصيانة", callback_data="adm_data")
         )
         return markup
@@ -472,6 +498,105 @@ def register_bot_handlers(bot_instance, bot_uname):
                 parse_mode="Markdown",
                 protect_content=True
             )
+
+    # --- لوحة إدارة وإذاعة القنوات ---
+    def get_channels_hub_keyboard():
+        ch_count = channels_col.count_documents({"bot_uname": bot_uname})
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        markup.add(
+            types.InlineKeyboardButton(f"🚀 إرسال إذاعة للقنوات الآن ({ch_count} قناة)", callback_data="ch_bc_start"),
+            types.InlineKeyboardButton(f"📋 القنوات المسجلة وإدارتها ({ch_count})", callback_data="ch_list_view"),
+            types.InlineKeyboardButton("➕ إضافة قناة يدوياً (ID أو توجيه)", callback_data="ch_add_manual"),
+            types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_home")
+        )
+        return markup
+
+    def get_ch_bc_config_keyboard(session):
+        pin_txt = "✅ تثبيت المنشور بالقنوات: مفعّل" if session.get("pin") else "❌ تثبيت المنشور بالقنوات: معطّل"
+        btns = session.get("buttons") or []
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        markup.add(
+            types.InlineKeyboardButton(pin_txt, callback_data="chbc_toggle_pin"),
+            types.InlineKeyboardButton(f"➕ إضافة زر رابط للمنشور (المضاف: {len(btns)})", callback_data="chbc_add_btn")
+        )
+        if btns:
+            markup.add(types.InlineKeyboardButton("🗑️ مسح الأزرار المضافة", callback_data="chbc_clear_btns"))
+        markup.add(
+            types.InlineKeyboardButton("📨 المتابعة لإرسال المنشور (نص / وسائط)", callback_data="chbc_ready_send"),
+            types.InlineKeyboardButton("❌ إلغاء", callback_data="adm_ch_hub")
+        )
+        return markup
+
+    def run_channel_broadcast(bc_message_id, session):
+        channels = list(channels_col.find({"bot_uname": bot_uname}))
+        total_ch = len(channels)
+        if total_ch == 0:
+            bot_instance.send_message(ADMIN_ID, f"⚠️ لا توجد قنوات مسجلة للبوت @{bot_uname} حالياً.")
+            return
+
+        reply_markup = None
+        btns = session.get("buttons") or []
+        if btns:
+            reply_markup = types.InlineKeyboardMarkup(row_width=1)
+            for b in btns:
+                reply_markup.add(types.InlineKeyboardButton(b["text"], url=b["url"]))
+
+        status_msg = bot_instance.send_message(
+            ADMIN_ID,
+            f"⏳ **جاري النشر في قنوات @{bot_uname}...** (`{total_ch}` قناة)",
+            parse_mode="Markdown"
+        )
+
+        success_cnt, fail_cnt = 0, 0
+        failed_titles = []
+
+        for ch in channels:
+            c_id = ch.get("chat_id")
+            c_title = ch.get("title", str(c_id))
+            sent = False
+            while not sent:
+                try:
+                    copied = bot_instance.copy_message(
+                        chat_id=c_id,
+                        from_chat_id=ADMIN_ID,
+                        message_id=bc_message_id,
+                        reply_markup=reply_markup
+                    )
+                    if session.get("pin"):
+                        try:
+                            bot_instance.pin_chat_message(c_id, copied.message_id, disable_notification=True)
+                        except:
+                            pass
+                    success_cnt += 1
+                    sent = True
+                    time.sleep(0.2)
+                except ApiTelegramException as e:
+                    if e.error_code == 429:
+                        retry_after = int(e.result_json.get("parameters", {}).get("retry_after", 5))
+                        time.sleep(retry_after + 1)
+                    else:
+                        fail_cnt += 1
+                        failed_titles.append(c_title)
+                        sent = True
+                except:
+                    fail_cnt += 1
+                    failed_titles.append(c_title)
+                    sent = True
+
+        try:
+            bot_instance.delete_message(ADMIN_ID, status_msg.message_id)
+        except:
+            pass
+
+        report = (
+            f"📣 **تقرير إذاعة القنوات (@{bot_uname}):**\n\n"
+            f"✅ تم النشر بنجاح في: `{success_cnt}` قناة\n"
+            f"❌ فشل النشر في: `{fail_cnt}` قناة"
+        )
+        if failed_titles:
+            report += "\n⚠️ قنوات تعذر النشر فيها (تأكد من صلاحية النشر للبوت):\n• " + "\n• ".join(failed_titles[:10])
+
+        bot_instance.send_message(ADMIN_ID, report, parse_mode="Markdown", reply_markup=get_channels_hub_keyboard())
 
     # --- لوحة التحكم المركزية بجميع البوتات (تشغيل/إيقاف/تخصيص/حذف) ---
     def get_bots_hub_keyboard():
@@ -934,6 +1059,93 @@ def register_bot_handlers(bot_instance, bot_uname):
                     chat_id, call.message.message_id, reply_markup=markup, parse_mode="Markdown"
                 )
 
+            # --- إدارة وإذاعة القنوات ---
+            elif call.data == "adm_ch_hub":
+                clear_state(ADMIN_ID)
+                bot_instance.edit_message_text(
+                    f"📣 **إدارة وإذاعة القنوات (@{bot_uname})**\n"
+                    "يتم التقاط أي قناة ترفع فيها البوت كمشرف تلقائياً، ويمكنك أيضاً إضافة قنواتك السابقة يدوياً:",
+                    chat_id, call.message.message_id, reply_markup=get_channels_hub_keyboard(), parse_mode="Markdown"
+                )
+
+            elif call.data == "ch_list_view":
+                chs = list(channels_col.find({"bot_uname": bot_uname}))
+                if not chs:
+                    bot_instance.answer_callback_query(call.id, "⚠️ لا توجد قنوات مسجلة لهذا البوت بعد.", show_alert=True)
+                    return
+                m = types.InlineKeyboardMarkup(row_width=1)
+                for ch in chs:
+                    title = ch.get("title", str(ch["chat_id"]))
+                    m.add(types.InlineKeyboardButton(f"🗑️ حذف: {title}", callback_data=f"ch_del|{ch['chat_id']}"))
+                m.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_ch_hub"))
+                bot_instance.edit_message_text(
+                    f"📋 **القنوات المسجلة للبوت @{bot_uname} ({len(chs)}):**\nاضغط على أي قناة لإزالتها من قائمة الإذاعة:",
+                    chat_id, call.message.message_id, reply_markup=m, parse_mode="Markdown"
+                )
+
+            elif call.data.startswith("ch_del|"):
+                c_id = int(call.data.split("|", 1)[1])
+                channels_col.delete_one({"chat_id": c_id, "bot_uname": bot_uname})
+                bot_instance.answer_callback_query(call.id, "✅ تم حذف القناة من القائمة.")
+                chs = list(channels_col.find({"bot_uname": bot_uname}))
+                if not chs:
+                    bot_instance.edit_message_text(
+                        f"📣 **إدارة وإذاعة القنوات (@{bot_uname})**",
+                        chat_id, call.message.message_id, reply_markup=get_channels_hub_keyboard(), parse_mode="Markdown"
+                    )
+                else:
+                    m = types.InlineKeyboardMarkup(row_width=1)
+                    for ch in chs:
+                        title = ch.get("title", str(ch["chat_id"]))
+                        m.add(types.InlineKeyboardButton(f"🗑️ حذف: {title}", callback_data=f"ch_del|{ch['chat_id']}"))
+                    m.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_ch_hub"))
+                    bot_instance.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=m)
+
+            elif call.data == "ch_add_manual":
+                set_state(ADMIN_ID, "ch_wait_manual")
+                bot_instance.answer_callback_query(call.id)
+                bot_instance.send_message(
+                    ADMIN_ID,
+                    "➕ **إضافة قناة يدوياً:**\n"
+                    "أرسل **معرّف القناة (ID)** مثل `-1001234567890` أو `@username`،\n"
+                    "أو قم بـ **إعادة توجيه (Forward)** أي رسالة من القناة إلى هنا (تأكد أن البوت مشرف فيها):",
+                    parse_mode="Markdown"
+                )
+
+            elif call.data == "ch_bc_start":
+                if channels_col.count_documents({"bot_uname": bot_uname}) == 0:
+                    bot_instance.answer_callback_query(call.id, "⚠️ أضف قناة واحدة على الأقل أو ارفع البوت مشرفاً في قناتك أولاً!", show_alert=True)
+                    return
+                sess = {"pin": False, "buttons": []}
+                set_state(ADMIN_ID, "chbc_config", sess)
+                bot_instance.edit_message_text(
+                    f"🎛️ **تجهيز منشور القنوات (@{bot_uname}):**\nاختر الإعدادات المطلوبة ثم أرسل المنشور:",
+                    chat_id, call.message.message_id, reply_markup=get_ch_bc_config_keyboard(sess), parse_mode="Markdown"
+                )
+
+            elif call.data in ["chbc_toggle_pin", "chbc_add_btn", "chbc_clear_btns", "chbc_ready_send"]:
+                st = get_state(ADMIN_ID)
+                if not st or not st.get("data"):
+                    return
+                sess = st["data"]
+                if call.data == "chbc_toggle_pin":
+                    sess["pin"] = not sess.get("pin", False)
+                    set_state(ADMIN_ID, "chbc_config", sess)
+                    bot_instance.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ch_bc_config_keyboard(sess))
+                elif call.data == "chbc_clear_btns":
+                    sess["buttons"] = []
+                    set_state(ADMIN_ID, "chbc_config", sess)
+                    bot_instance.answer_callback_query(call.id, "🗑️ تم مسح الأزرار.")
+                    bot_instance.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ch_bc_config_keyboard(sess))
+                elif call.data == "chbc_add_btn":
+                    set_state(ADMIN_ID, "chbc_wait_btn", sess)
+                    bot_instance.answer_callback_query(call.id)
+                    bot_instance.send_message(ADMIN_ID, "🔗 أرسل **نص الزر | الرابط**\nمثال: `🔥 اشترك الآن | https://t.me/YourChannel`", parse_mode="Markdown")
+                elif call.data == "chbc_ready_send":
+                    set_state(ADMIN_ID, "chbc_wait_msg", sess)
+                    bot_instance.answer_callback_query(call.id)
+                    bot_instance.send_message(ADMIN_ID, "📨 **أرسل الآن المنشور (نص، صورة، فيديو، ملف، أو رسالة منسقة):**", parse_mode="Markdown")
+
             # --- إدارة البوتات عن بُعد (تشغيل / إيقاف / تخصيص / حذف) ---
             elif call.data == "adm_bots_hub":
                 bot_instance.edit_message_text(
@@ -1194,6 +1406,70 @@ def register_bot_handlers(bot_instance, bot_uname):
             state = st_doc.get("state")
             data = st_doc.get("data", {})
 
+            # إضافة قناة يدوياً لإذاعة القنوات
+            if state == "ch_wait_manual":
+                target_chat = None
+                if message.forward_from_chat and message.forward_from_chat.type == "channel":
+                    target_chat = message.forward_from_chat.id
+                elif message.content_type == "text":
+                    txt = message.text.strip()
+                    target_chat = int(txt) if (txt.startswith("-") and txt[1:].isdigit()) else txt
+
+                if not target_chat:
+                    bot_instance.reply_to(message, "⚠️ أرسل ID قناة صحيح أو أعد توجيه رسالة من القناة.")
+                    return
+
+                try:
+                    chat_info = bot_instance.get_chat(target_chat)
+                    bot_info = bot_instance.get_me()
+                    member = bot_instance.get_chat_member(chat_info.id, bot_info.id)
+                    if member.status != "administrator":
+                        bot_instance.reply_to(message, f"⚠️ البوت @{bot_uname} ليس مشرفاً في **{chat_info.title}**!", parse_mode="Markdown")
+                        return
+                    clear_state(ADMIN_ID)
+                    channels_col.update_one(
+                        {"chat_id": chat_info.id, "bot_uname": bot_uname},
+                        {"$set": {
+                            "title": chat_info.title or "قناة بدون اسم",
+                            "username": chat_info.username,
+                            "added_at": datetime.now()
+                        }},
+                        upsert=True
+                    )
+                    bot_instance.reply_to(
+                        message,
+                        f"✅ تم إضافة القناة **{chat_info.title}** بنجاح إلى قائمة @{bot_uname}!",
+                        parse_mode="Markdown",
+                        reply_markup=get_channels_hub_keyboard()
+                    )
+                except Exception as e:
+                    bot_instance.reply_to(message, f"❌ تعذر الوصول للقناة، تأكد أن البوت مشرف فيها:\n`{e}`", parse_mode="Markdown")
+                return
+
+            # إضافة أزرار لمنشور القنوات
+            if state == "chbc_wait_btn" and message.content_type == "text":
+                if "|" not in message.text:
+                    bot_instance.reply_to(message, "⚠️ استخدم `|` بين نص الزر والرابط.")
+                    return
+                btn_text, btn_url = [x.strip() for x in message.text.split("|", 1)]
+                btns = data.get("buttons") or []
+                btns.append({"text": btn_text, "url": btn_url})
+                data["buttons"] = btns
+                set_state(ADMIN_ID, "chbc_config", data)
+                bot_instance.reply_to(
+                    message,
+                    f"✅ تم إضافة الزر (**{btn_text}**)! يمكنك إضافة زر آخر أو المتابعة للنشر:",
+                    parse_mode="Markdown",
+                    reply_markup=get_ch_bc_config_keyboard(data)
+                )
+                return
+
+            # استلام منشور القنوات ونشره فوراً
+            if state == "chbc_wait_msg":
+                clear_state(ADMIN_ID)
+                Thread(target=run_channel_broadcast, args=(message.message_id, data), daemon=True).start()
+                return
+
             # التعديل عن بُعد لأي بوت من لوحة التحكم
             if state == "remote_edit":
                 clear_state(ADMIN_ID)
@@ -1420,7 +1696,7 @@ def launch_bot_polling(token_str, is_primary=False):
             active_bot_instances[bot_uname] = bot_instance
             print(f"🚀 بدأ تشغيل البوت بنجاح: @{bot_uname}")
             register_bot_handlers(bot_instance, bot_uname)
-            bot_instance.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60)
+            bot_instance.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60, allowed_updates=["message", "callback_query", "chat_join_request", "my_chat_member"])
         except ApiTelegramException as e:
             if bot_uname and bot_uname in active_bot_instances:
                 active_bot_instances.pop(bot_uname, None)
